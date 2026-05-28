@@ -1,65 +1,138 @@
-:root {
-  color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f7f7f4;
-  color: #171717;
+/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #0B0E14;
+  --color-surface-dim: #05070A;
+  --color-surface-bright: #151A22;
+  --color-surface-container-lowest: #05070A;
+  --color-surface-container-low: #0B0E14;
+  --color-surface-container: #151A22;
+  --color-surface-container-high: #1D232D;
+  --color-surface-container-highest: #2A3341;
+  --color-on-surface: #F2F5F8;
+  --color-on-surface-variant: #8E9BAE;
+  --color-inverse-surface: #F2F5F8;
+  --color-inverse-on-surface: #1D232D;
+  --color-outline: #506079;
+  --color-outline-variant: #2A3341;
+  --color-surface-tint: #00E6F6;
+  --color-primary: #00E6F6;
+  --color-on-primary: #002224;
+  --color-primary-container: #004A52;
+  --color-on-primary-container: #B3FBFF;
+  --color-inverse-primary: #009CA8;
+  --color-secondary: #00F4B9;
+  --color-on-secondary: #003829;
+  --color-secondary-container: #004232;
+  --color-on-secondary-container: #A8FFE7;
+  --color-tertiary: #B072FF;
+  --color-on-tertiary: #270059;
+  --color-tertiary-container: #331A55;
+  --color-on-tertiary-container: #E4CCFF;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  
+  --color-theme-bg: #0B0E14;
+  --color-theme-surface: #151A22;
+  --color-theme-border: #2A3341;
+  --color-theme-elevated: #1D232D;
+  --color-theme-teal: #00E6F6;
+  --color-theme-blue: #3EAEFF;
+  --color-theme-green: #00F4B9;
+  --color-theme-orange: #FFC000;
+  --color-theme-rose: #FF3366;
+  --color-theme-purple: #B072FF;
+  --color-theme-purple-bright: #D946EF;
+  --color-theme-habit-bg: #0A241F;
+  --color-theme-habit-accent: #00F4B9;
+  --color-theme-project-bg: #1E1233;
+  --color-theme-project-accent: #B072FF;
+  --color-theme-fab-bg: #D946EF;
+  
+  --color-card-bg: #151A22;
+  --color-card-border: #2A3341;
+  --color-status-blue: #3EAEFF;
+  --color-status-green: #00F4B9;
+  --color-status-orange: #FFC000;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-display: "Inter", sans-serif;
+  --font-headline-lg-mobile: "Inter", sans-serif;
+  --font-headline-md: "Inter", sans-serif;
+  --font-headline-lg: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-label-md: "Inter", sans-serif;
+
+  --text-body-md: 13px;
+  --text-body-md--line-height: 18px;
+  --text-display: 28px;
+  --text-display--line-height: 36px;
+  --text-display--letter-spacing: -0.02em;
+  --text-headline-lg-mobile: 20px;
+  --text-headline-lg-mobile--line-height: 26px;
+  --text-headline-md: 18px;
+  --text-headline-md--line-height: 24px;
+  --text-headline-lg: 22px;
+  --text-headline-lg--line-height: 28px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-body-lg: 15px;
+  --text-body-lg--line-height: 22px;
+  --text-label-md: 11px;
+  --text-label-md--line-height: 14px;
+  --text-label-md--letter-spacing: 0.05em;
+
+  --spacing-xxl: 40px;
+  --spacing-xl: 28px;
+  --spacing-lg: 20px;
+  --spacing-md: 14px;
+  --spacing-sm: 10px;
+  --spacing-xs: 6px;
+  --spacing-base: 4px;
+  --spacing-margin-mobile: 16px;
+  --spacing-gutter-mobile: 12px;
+  --spacing-bottom-nav: 80px;
+
+  --breakpoint-md: 768px;
 }
 
-* { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; background: #f7f7f4; }
-button, input, textarea { font: inherit; }
-
-.page {
-  min-height: 100vh;
-  padding: 20px 16px 96px;
+body {
+  background-color: var(--color-theme-bg);
+  color: var(--color-on-surface);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 18px;
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.page-title { margin: 0; font-size: 1.45rem; line-height: 1.2; }
-.muted { color: #696969; }
-.list { display: grid; gap: 10px; }
-.card {
-  background: #fff;
-  border: 1px solid #e3e1dc;
-  border-radius: 8px;
-  padding: 14px;
+.circular-chart {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  max-height: 250px;
 }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.primary-button {
-  border: 0;
-  border-radius: 8px;
-  background: #1e6f5c;
-  color: #fff;
-  padding: 11px 14px;
+.circle-bg {
+  fill: none;
+  stroke: var(--color-theme-border);
+  stroke-width: 4;
 }
-.icon-button {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 0;
-  background: #1e6f5c;
-  color: #fff;
-  font-size: 1.35rem;
+.circle {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
 }
-.field {
-  width: 100%;
-  border: 1px solid #d5d1c9;
-  border-radius: 8px;
-  padding: 12px;
-  background: #fff;
-}
-
-@media (min-width: 760px) {
-  .page {
-    max-width: 760px;
-    margin: 0 auto;
-    padding-inline: 24px;
-  }
+.progress-ring-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
 }
