@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/IDo.Application/IDo.Application.csproj" />
+    <Project Path="src/IDo.Domain/IDo.Domain.csproj" />
+    <Project Path="src/IDo.Infrastructure/IDo.Infrastructure.csproj" />
+    <Project Path="src/IDo.Services/IDo.Services.csproj" />
+    <Project Path="src/IDo.Web/IDo.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/IDo.IntegrationTests/IDo.IntegrationTests.csproj" />
+    <Project Path="tests/IDo.UnitTests/IDo.UnitTests.csproj" />
+  </Folder>
+</Solution>
