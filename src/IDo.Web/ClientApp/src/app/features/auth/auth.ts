@@ -3,10 +3,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
+import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal';
 
 @Component({
   selector: 'app-auth',
-  imports: [RouterLink],
+  imports: [RouterLink, LoadingModalComponent],
   template: `
     <section class="min-h-full px-margin-mobile py-xl flex flex-col justify-center gap-xl">
       <header class="flex flex-col gap-sm">
@@ -50,7 +51,10 @@ import { AuthService } from '../../core/auth.service';
           <span class="text-label-md font-label-md text-on-surface-variant">Password</span>
           <div class="h-12 rounded-xl bg-theme-surface border border-theme-border flex items-center gap-sm px-md focus-within:border-primary">
             <span class="material-symbols-outlined text-on-surface-variant text-[20px]">lock</span>
-            <input [value]="password" (input)="password = inputValue($event)" type="password" [autocomplete]="isRegister() ? 'new-password' : 'current-password'" class="bg-transparent outline-none border-none text-on-surface w-full text-body-lg font-body-lg" required />
+            <input [value]="password" (input)="password = inputValue($event)" [type]="showPassword() ? 'text' : 'password'" [autocomplete]="isRegister() ? 'new-password' : 'current-password'" class="bg-transparent outline-none border-none text-on-surface w-full text-body-lg font-body-lg min-w-0" required />
+            <button type="button" (click)="togglePasswordVisibility()" [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'" class="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary/10 active:scale-95 transition-colors shrink-0">
+              <span class="material-symbols-outlined text-[20px]">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+            </button>
           </div>
         </label>
 
@@ -62,7 +66,7 @@ import { AuthService } from '../../core/auth.service';
 
         <button type="submit" [disabled]="isSubmitting()" class="h-12 rounded-xl bg-primary text-on-primary flex items-center justify-center gap-sm text-body-lg font-body-lg font-semibold disabled:opacity-60">
           <span class="material-symbols-outlined text-[20px]">{{ isRegister() ? 'person_add' : 'login' }}</span>
-          {{ isSubmitting() ? 'Please wait' : isRegister() ? 'Create account' : 'Log in' }}
+          {{ isRegister() ? 'Create account' : 'Log in' }}
         </button>
       </form>
 
@@ -76,11 +80,18 @@ import { AuthService } from '../../core/auth.service';
         }
       </footer>
     </section>
+
+    <app-loading-modal
+      [open]="isSubmitting()"
+      [title]="isRegister() ? 'Creating account' : 'Signing in'"
+      [message]="isRegister() ? 'Setting up your IDo workspace' : 'Checking your credentials'"
+    />
   `
 })
 export class AuthComponent implements OnDestroy {
   isRegister = signal(false);
   isSubmitting = signal(false);
+  showPassword = signal(false);
   error = signal<string | null>(null);
   userName = '';
   email = '';
@@ -128,6 +139,10 @@ export class AuthComponent implements OnDestroy {
 
   inputValue(event: Event): string {
     return event.target instanceof HTMLInputElement ? event.target.value : '';
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword.update(value => !value);
   }
 
   private messageFromError(error: unknown): string {
