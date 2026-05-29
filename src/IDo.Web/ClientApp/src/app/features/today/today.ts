@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-today',
@@ -7,11 +8,15 @@ import { Component } from '@angular/core';
     <header class="w-full top-0 sticky bg-theme-bg z-40 py-md">
       <div class="flex justify-between items-center px-margin-mobile w-full">
         <div class="flex items-center gap-md">
-          <div class="w-10 h-10 rounded-full overflow-hidden border border-theme-border flex-shrink-0">
-            <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoRy-zUhcJjnUmQnNh6lHGjHY9rAxnenB8RQpsAsuFCddg0V9C4bjMPphYLAlQyoHc_ZFU7AqaQh8st8accZ4_5GColarBv4nip8sF_V4_ciQ0FUgvZ4Fuf0NC-JNZIPYAmlVR-8SMbf6R-PTD-0qEeRysR-l1NCRdL2mu-uIcb6_eX5B9FXocAmhY3q23oO6OvI1p0sR8e4pLvT2LMx9cXxSiiqVHh-8jDzsIyiEgWkh3OdDbmPcLwNHkKUPIpCsT6vg1O5x836Ex" alt="User" class="w-full h-full object-cover"/>
+          <div class="w-10 h-10 rounded-full overflow-hidden border border-theme-border flex-shrink-0 bg-theme-surface flex items-center justify-center">
+            @if (avatarUrl()) {
+              <img [src]="avatarUrl()" [alt]="displayName()" class="w-full h-full object-cover"/>
+            } @else {
+              <span class="text-body-md font-body-md font-semibold text-primary">{{ initials() }}</span>
+            }
           </div>
-          <div>
-            <h1 class="text-headline-lg-mobile font-headline-lg-mobile text-primary leading-tight">Good Morning</h1>
+          <div class="min-w-0">
+            <h1 class="text-headline-lg-mobile font-headline-lg-mobile text-primary leading-tight truncate">Good Morning, {{ displayName() }}</h1>
             <p class="text-body-md font-body-md text-on-surface-variant leading-tight">Your plan for today is ready</p>
           </div>
         </div>
@@ -26,27 +31,24 @@ import { Component } from '@angular/core';
       <!-- Weekly Calendar -->
       <section>
         <div class="flex overflow-x-auto hide-scrollbar gap-sm py-xs snap-x -mx-margin-mobile px-margin-mobile">
-          <div class="flex flex-col items-center justify-center min-w-[64px] h-[88px] rounded-full bg-theme-surface border border-theme-border text-on-surface-variant snap-center shrink-0">
-            <span class="text-label-md font-label-md uppercase mb-1">Mon</span>
-            <span class="text-headline-md font-headline-md">12</span>
-          </div>
-          <div class="flex flex-col items-center justify-center min-w-[64px] h-[88px] rounded-full bg-theme-surface border border-theme-border text-on-surface-variant snap-center shrink-0">
-            <span class="text-label-md font-label-md uppercase mb-1">Tue</span>
-            <span class="text-headline-md font-headline-md">13</span>
-          </div>
-          <div class="flex flex-col items-center justify-center min-w-[64px] h-[88px] rounded-full bg-primary-container text-on-primary-container soft-shadow snap-center shrink-0 border border-primary-container relative">
-            <span class="text-label-md font-label-md uppercase mb-1 font-bold">Wed</span>
-            <span class="text-headline-md font-headline-md font-bold">14</span>
-            <span class="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-theme-bg"></span>
-          </div>
-          <div class="flex flex-col items-center justify-center min-w-[64px] h-[88px] rounded-full bg-theme-surface border border-theme-border text-on-surface-variant snap-center shrink-0">
-            <span class="text-label-md font-label-md uppercase mb-1">Thu</span>
-            <span class="text-headline-md font-headline-md">15</span>
-          </div>
-          <div class="flex flex-col items-center justify-center min-w-[64px] h-[88px] rounded-full bg-theme-surface border border-theme-border text-on-surface-variant snap-center shrink-0">
-            <span class="text-label-md font-label-md uppercase mb-1">Fri</span>
-            <span class="text-headline-md font-headline-md">16</span>
-          </div>
+          @for (day of calendarDays(); track day.key) {
+            <div
+              class="flex flex-col items-center justify-center min-w-[64px] h-[88px] rounded-full snap-center shrink-0 border relative"
+              [class.bg-primary-container]="day.isToday"
+              [class.text-on-primary-container]="day.isToday"
+              [class.border-primary-container]="day.isToday"
+              [class.bg-theme-surface]="!day.isToday"
+              [class.text-on-surface-variant]="!day.isToday"
+              [class.border-theme-border]="!day.isToday"
+            >
+              <span class="text-label-md font-label-md uppercase mb-1" [class.font-bold]="day.isToday">{{ day.weekday }}</span>
+              <span class="text-headline-md font-headline-md" [class.font-bold]="day.isToday">{{ day.dayOfMonth }}</span>
+              <span class="text-[10px] leading-none mt-0.5" [class.text-on-primary-container]="day.isToday" [class.text-on-surface-variant]="!day.isToday">{{ day.month }}</span>
+              @if (day.isToday) {
+                <span class="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-theme-bg"></span>
+              }
+            </div>
+          }
         </div>
       </section>
 
@@ -234,4 +236,53 @@ import { Component } from '@angular/core';
     </div>
   `
 })
-export class TodayComponent {}
+export class TodayComponent {
+  private readonly auth = inject(AuthService);
+  private readonly today = new Date();
+
+  readonly currentUser = this.auth.currentUser;
+  readonly displayName = computed(() => {
+    const user = this.currentUser();
+    return user?.profile.fullName?.trim() || user?.userName || 'there';
+  });
+  readonly avatarUrl = computed(() => this.currentUser()?.profile.avatarUrl?.trim() || null);
+  readonly initials = computed(() => this.displayName()
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || 'U');
+  readonly calendarDays = computed(() => this.buildCurrentWeek());
+
+  private buildCurrentWeek(): CalendarDay[] {
+    const weekStart = new Date(this.today);
+    const dayOffset = (weekStart.getDay() + 6) % 7;
+    weekStart.setDate(weekStart.getDate() - dayOffset);
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + index);
+      return {
+        key: date.toISOString(),
+        weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayOfMonth: date.getDate(),
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        isToday: this.isSameDate(date, this.today)
+      };
+    });
+  }
+
+  private isSameDate(left: Date, right: Date): boolean {
+    return left.getFullYear() === right.getFullYear()
+      && left.getMonth() === right.getMonth()
+      && left.getDate() === right.getDate();
+  }
+}
+
+interface CalendarDay {
+  key: string;
+  weekday: string;
+  dayOfMonth: number;
+  month: string;
+  isToday: boolean;
+}
