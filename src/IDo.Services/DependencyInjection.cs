@@ -8,6 +8,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
+        services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<ITodayService, TodayService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<IHabitService, HabitService>();

@@ -8,6 +8,13 @@ public interface ITodayService
     Task<TodayDashboardDto> GetTodayAsync(Guid userId, DateOnly date, CancellationToken cancellationToken = default);
 }
 
+public interface IUserManagementService
+{
+    Task<AuthUserDto> RegisterAsync(RegisterUserRequest request, CancellationToken cancellationToken = default);
+    Task<AuthUserDto> LoginAsync(LoginUserRequest request, CancellationToken cancellationToken = default);
+    Task<AuthUserDto> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default);
+}
+
 public interface ITaskService
 {
     Task<TaskDto> CreatePersonalTaskAsync(Guid userId, CreateTaskRequest request, CancellationToken cancellationToken = default);

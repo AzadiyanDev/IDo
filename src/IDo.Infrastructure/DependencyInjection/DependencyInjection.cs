@@ -1,4 +1,5 @@
 using IDo.Application.Abstractions.DateTime;
+using IDo.Application.Abstractions.Identity;
 using IDo.Application.Abstractions.Notifications;
 using IDo.Application.Abstractions.Persistence;
 using IDo.Infrastructure.Identity;
@@ -37,6 +38,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<IDoDbContext>();
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IIdentityAccountService, IdentityAccountService>();
         services.AddScoped<ITaskRepository, TaskRepository>();
         services.AddScoped<IHabitRepository, HabitRepository>();
         services.AddScoped<IHabitLogRepository, HabitLogRepository>();

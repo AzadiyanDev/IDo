@@ -36,7 +36,9 @@ export class App {
       // Hide bottom nav on detail screens
       const hideNav = event.urlAfterRedirects.includes('/project/') || 
                       event.urlAfterRedirects.includes('/task/') ||
-                      event.urlAfterRedirects.includes('/inbox');
+                      event.urlAfterRedirects.includes('/inbox') ||
+                      event.urlAfterRedirects.includes('/login') ||
+                      event.urlAfterRedirects.includes('/register');
       this.showBottomNav.set(!hideNav);
     });
   }
