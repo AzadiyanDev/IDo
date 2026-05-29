@@ -108,6 +108,38 @@ public sealed class BusinessRuleTests
     }
 
     [Fact]
+    public async Task Today_dashboard_counts_category_completion()
+    {
+        var (uow, _) = CreateUnitOfWork();
+        var userId = Guid.NewGuid();
+        var today = new DateOnly(2026, 5, 29);
+        var project = new Project { OwnerUserId = userId, Title = "Project" };
+        var habit = new Habit { UserId = userId, Title = "Read", ScheduleType = HabitScheduleType.SpecificDays, IsActive = true };
+        habit.ScheduleDays.Add(new HabitScheduleDay { Habit = habit, DayOfWeek = today.DayOfWeek, DayType = HabitDayType.Active });
+
+        await uow.Projects.AddAsync(project);
+        await uow.ProjectMembers.AddAsync(new ProjectMember { ProjectId = project.Id, UserId = userId, Role = ProjectMemberRole.Owner, Status = ProjectMemberStatus.Active });
+        await uow.Tasks.AddAsync(new IDoTask { CreatorUserId = userId, AssigneeUserId = userId, Title = "Todo done", DueDate = today, Status = IDoTaskStatus.Done, Type = IDoTaskType.Personal });
+        await uow.Tasks.AddAsync(new IDoTask { CreatorUserId = userId, AssigneeUserId = userId, Title = "Todo open", DueDate = today, Status = IDoTaskStatus.Todo, Type = IDoTaskType.Personal });
+        await uow.Tasks.AddAsync(new IDoTask { CreatorUserId = userId, AssigneeUserId = userId, ProjectId = project.Id, Title = "Project done", DueDate = today, Status = IDoTaskStatus.Done, Type = IDoTaskType.Project });
+        await uow.Habits.AddAsync(habit);
+        await uow.HabitLogs.AddAsync(new HabitLog { HabitId = habit.Id, UserId = userId, Date = today, Status = HabitLogStatus.Done });
+        await uow.SaveChangesAsync();
+        var service = new TodayService(uow);
+
+        var dashboard = await service.GetTodayAsync(userId, today);
+
+        Assert.Equal(2, dashboard.Summary.PersonalTaskCount);
+        Assert.Equal(1, dashboard.Summary.PersonalTaskDoneCount);
+        Assert.Equal(1, dashboard.Summary.HabitCount);
+        Assert.Equal(1, dashboard.Summary.HabitDoneCount);
+        Assert.Equal(1, dashboard.Summary.ProjectTaskCount);
+        Assert.Equal(1, dashboard.Summary.ProjectTaskDoneCount);
+        Assert.Equal(75m, dashboard.Summary.DonePercentage);
+        Assert.Single(dashboard.ActiveProjects);
+    }
+
+    [Fact]
     public async Task Project_owner_has_manage_permission()
     {
         var (uow, _) = CreateUnitOfWork();
