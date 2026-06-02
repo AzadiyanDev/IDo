@@ -2,8 +2,10 @@ using IDo.Application;
 using IDo.Infrastructure.DependencyInjection;
 using IDo.Services;
 using IDo.Web.DependencyInjection;
+using IDo.Web.Hubs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.FileProviders;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,8 +37,13 @@ builder.Services
         };
     });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -62,6 +69,7 @@ else
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<TaskHub>("/hubs/tasks");
 app.MapControllers();
 app.MapFallbackToFile(Directory.Exists(angularBrowserRoot) ? "browser/index.html" : "index.html");
 

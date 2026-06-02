@@ -24,9 +24,10 @@ public sealed class ProgressService(IUnitOfWork unitOfWork, IProjectService proj
         foreach (var habit in userHabits)
         {
             var logs = await unitOfWork.HabitLogs.GetLogsInRangeAsync(habit.Id, from, to, cancellationToken);
-            foreach (var log in logs) habit.Logs.Add(log);
+            foreach (var log in logs.Where(log => habit.Logs.All(existing => existing.Id != log.Id))) habit.Logs.Add(log);
             var activeDates = Enumerable.Range(0, to.DayNumber - from.DayNumber + 1).Select(from.AddDays).Where(x => HabitRules.IsScheduledActiveDay(habit, x)).ToArray();
-            result.Add(new HabitProgressDto(habit.Id, logs.Count(x => x.Status == HabitLogStatus.Done && activeDates.Contains(x.Date)), activeDates.Length, HabitRules.CalculateStreak(habit, to), habit.BestStreak, HabitRules.CalculateSuccessRate(habit, from, to)));
+            var doneActiveDays = logs.Where(x => x.Status == HabitLogStatus.Done && activeDates.Contains(x.Date)).Select(x => x.Date).Distinct().Count();
+            result.Add(new HabitProgressDto(habit.Id, doneActiveDays, activeDates.Length, HabitRules.CalculateStreak(habit, to), habit.BestStreak, HabitRules.CalculateSuccessRate(habit, from, to)));
         }
         return result;
     }
@@ -41,7 +42,16 @@ public sealed class ProgressService(IUnitOfWork unitOfWork, IProjectService proj
 
     public async Task<WeeklyActivityDto> GetWeeklyActivityAsync(Guid userId, DateOnly weekStartDate, CancellationToken cancellationToken = default)
     {
-        var tasks = await unitOfWork.Tasks.GetTodayTasksAsync(userId, weekStartDate, cancellationToken);
+        var weekStartUtc = weekStartDate.ToDateTime(TimeOnly.MinValue);
+        var weekEndUtc = weekStartDate.AddDays(7).ToDateTime(TimeOnly.MinValue);
+        var tasks = await unitOfWork.Tasks.ListAsync(
+            x => x.IsCountableInProgress
+                && x.Status != IDoTaskStatus.Archived
+                && x.CompletedAtUtc.HasValue
+                && x.CompletedAtUtc.Value >= weekStartUtc
+                && x.CompletedAtUtc.Value < weekEndUtc
+                && (x.CreatorUserId == userId || x.AssigneeUserId == userId),
+            cancellationToken);
         var map = Enumerable.Range(0, 7).Select(weekStartDate.AddDays).ToDictionary(x => x, x => tasks.Count(t => t.CompletedAtUtc.HasValue && DateOnly.FromDateTime(t.CompletedAtUtc.Value) == x));
         return new WeeklyActivityDto(weekStartDate, map);
     }

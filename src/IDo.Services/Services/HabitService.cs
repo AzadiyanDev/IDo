@@ -59,7 +59,6 @@ public sealed class HabitService(IUnitOfWork unitOfWork, IDateTimeProvider dateT
         {
             log = new HabitLog { HabitId = habitId, UserId = userId, Date = date };
             await unitOfWork.HabitLogs.AddAsync(log, cancellationToken);
-            habit.Logs.Add(log);
         }
         log.Status = status;
         log.CompletedAtUtc = status == HabitLogStatus.Done ? dateTimeProvider.UtcNow : null;

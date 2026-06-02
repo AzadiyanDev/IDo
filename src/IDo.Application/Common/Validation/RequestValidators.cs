@@ -15,6 +15,7 @@ public static class RequestValidators
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(request.Title)) errors.Add("Task title is required.");
         if (request.ReminderAtUtc.HasValue && request.ReminderAtUtc.Value.Kind != DateTimeKind.Utc) errors.Add("ReminderAtUtc must be UTC.");
+        if (request.Priority is < 0 or > 5) errors.Add("Priority must be between 0 and 5.");
         ThrowIfAny(errors);
     }
 
@@ -23,6 +24,7 @@ public static class RequestValidators
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(request.Title)) errors.Add("Task title is required.");
         if (request.ReminderAtUtc.HasValue && request.ReminderAtUtc.Value.Kind != DateTimeKind.Utc) errors.Add("ReminderAtUtc must be UTC.");
+        if (request.Priority is < 0 or > 5) errors.Add("Priority must be between 0 and 5.");
         ThrowIfAny(errors);
     }
 
@@ -47,7 +49,6 @@ public static class RequestValidators
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(request.Title)) errors.Add("Section title is required.");
-        if (request.Visibility == SectionVisibility.AssignedToMember && request.AssignedUserId is null) errors.Add("Assigned sections require an assigned user.");
         ThrowIfAny(errors);
     }
 

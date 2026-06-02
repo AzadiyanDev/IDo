@@ -12,4 +12,5 @@ public sealed record CreateTaskRequest(
     Guid? ProjectId,
     Guid? SectionId,
     Guid? HabitId,
+    int? Priority,
     bool IsCountableInProgress);

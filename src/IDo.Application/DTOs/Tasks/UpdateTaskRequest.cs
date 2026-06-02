@@ -12,4 +12,5 @@ public sealed record UpdateTaskRequest(
     DateTime? ReminderAtUtc,
     Guid? AssigneeUserId,
     IDoTaskStatus? Status,
+    int? Priority,
     bool IsCountableInProgress);

@@ -18,6 +18,20 @@ public sealed class TaskRequestsController(ICurrentUserService currentUser, ITas
         return Ok((await unitOfWork.TaskRequests.GetPendingRequestsForUserAsync(userId.Value, cancellationToken)).Select(x => x.ToDto()));
     }
 
+    [HttpGet("~/api/inbox")]
+    public Task<IActionResult> InboxAlias(CancellationToken cancellationToken) => Inbox(cancellationToken);
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        var request = await unitOfWork.TaskRequests.GetByIdAsync(id, cancellationToken);
+        if (request is null) return NotFound();
+        if (request.ReceiverUserId != userId.Value && request.SenderUserId != userId.Value) return Forbid();
+        return Ok(request.ToDto());
+    }
+
     [HttpGet("sent")]
     public async Task<IActionResult> Sent(CancellationToken cancellationToken)
     {

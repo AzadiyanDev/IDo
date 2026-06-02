@@ -25,6 +25,20 @@ public sealed class IdentityAccountService(UserManager<ApplicationUser> userMana
             : new IdentityAccountDto(user.Id, userProfileId, user.UserName ?? string.Empty, user.Email ?? string.Empty);
     }
 
+    public async Task<IReadOnlyCollection<IdentityAccountDto>> SearchByUserNameAsync(string query, int take, CancellationToken cancellationToken = default)
+    {
+        var normalizedQuery = query.Trim();
+        if (normalizedQuery.Length < 2) return Array.Empty<IdentityAccountDto>();
+
+        return await userManager.Users
+            .AsNoTracking()
+            .Where(x => x.UserName != null && x.UserName.Contains(normalizedQuery) && x.UserProfileId.HasValue)
+            .OrderBy(x => x.UserName)
+            .Take(Math.Clamp(take, 1, 25))
+            .Select(x => new IdentityAccountDto(x.Id, x.UserProfileId!.Value, x.UserName ?? string.Empty, x.Email ?? string.Empty))
+            .ToArrayAsync(cancellationToken);
+    }
+
     public async Task<IdentityOperationResult> CreateAccountAsync(Guid userProfileId, string userName, string email, string password, CancellationToken cancellationToken = default)
     {
         var user = new ApplicationUser

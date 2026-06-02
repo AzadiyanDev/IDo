@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using IDo.Application.Abstractions.Identity;
+using IDo.Application.Abstractions.Realtime;
+using IDo.Web.Realtime;
 
 namespace IDo.Web.DependencyInjection;
 
@@ -9,6 +11,7 @@ public static class DependencyInjection
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ITaskRealtimeNotifier, SignalRTaskRealtimeNotifier>();
         return services;
     }
 }

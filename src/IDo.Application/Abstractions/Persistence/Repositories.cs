@@ -58,16 +58,22 @@ public interface IProjectMemberRepository : IRepository<ProjectMember>
 {
     Task<bool> IsProjectOwnerAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> IsProjectMemberAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
+    Task<ProjectMember?> GetMembershipAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
     Task<ProjectMemberRole?> GetMemberRoleAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
 }
 
-public interface IProjectSectionRepository : IRepository<ProjectSection> { }
+public interface IProjectSectionRepository : IRepository<ProjectSection>
+{
+    Task<ProjectSection?> GetSectionWithTasksAsync(Guid sectionId, CancellationToken cancellationToken = default);
+}
 
 public interface ITaskRequestRepository : IRepository<TaskRequest>
 {
     Task<IReadOnlyList<TaskRequest>> GetPendingRequestsForUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TaskRequest>> GetSentRequestsAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<TaskRequest?> GetTaskPendingRequestAsync(Guid taskId, CancellationToken cancellationToken = default);
+    Task<TaskRequest?> GetTaskPendingRequestAsync(Guid taskId, Guid? receiverUserId = null, CancellationToken cancellationToken = default);
+    Task<TaskRequest?> GetProjectInvitePendingRequestAsync(Guid projectId, Guid receiverUserId, CancellationToken cancellationToken = default);
+    Task<TaskRequest?> GetSectionPendingRequestAsync(Guid sectionId, Guid receiverUserId, CancellationToken cancellationToken = default);
 }
 
 public interface INotificationRepository : IRepository<Notification>

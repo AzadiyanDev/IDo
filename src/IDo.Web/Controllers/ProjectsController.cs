@@ -1,21 +1,19 @@
 using IDo.Application.Abstractions.Identity;
-using IDo.Application.Abstractions.Persistence;
 using IDo.Application.Abstractions.Services;
-using IDo.Application.Common.Mappings;
 using IDo.Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IDo.Web.Controllers;
 
 [Route("api/projects")]
-public sealed class ProjectsController(ICurrentUserService currentUser, IProjectService projectService, IUnitOfWork unitOfWork) : ApiControllerBase(currentUser)
+public sealed class ProjectsController(ICurrentUserService currentUser, IProjectService projectService) : ApiControllerBase(currentUser)
 {
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
         if (userId.Result is not null) return userId.Result;
-        return Ok((await unitOfWork.Projects.GetUserProjectsAsync(userId.Value, cancellationToken)).Select(x => x.ToDto()));
+        return Ok(await projectService.GetMyProjectsAsync(userId.Value, cancellationToken));
     }
 
     [HttpGet("{id:guid}")]
@@ -67,12 +65,36 @@ public sealed class ProjectsController(ICurrentUserService currentUser, IProject
         return Ok(await projectService.UpdateSectionAsync(userId.Value, projectId, sectionId, request, cancellationToken));
     }
 
-    [HttpPost("{id:guid}/members")]
-    public async Task<IActionResult> AddMember(Guid id, AddProjectMemberRequest request, CancellationToken cancellationToken)
+    [HttpPost("{projectId:guid}/sections/{sectionId:guid}/assign")]
+    public async Task<IActionResult> AssignSection(Guid projectId, Guid sectionId, RequestAssignSectionRequest request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
         if (userId.Result is not null) return userId.Result;
-        return Ok(await projectService.AddMemberAsync(userId.Value, id, request, cancellationToken));
+        return Ok(await projectService.RequestAssignSectionAsync(userId.Value, projectId, sectionId, request, cancellationToken));
+    }
+
+    [HttpGet("{id:guid}/users")]
+    public async Task<IActionResult> SearchUsers(Guid id, [FromQuery] string query, [FromQuery] int take = 10, CancellationToken cancellationToken = default)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await projectService.SearchUsersByUsernameAsync(userId.Value, id, query, take, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/invite")]
+    public async Task<IActionResult> Invite(Guid id, InviteProjectMemberRequest request, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await projectService.InviteUserToProjectAsync(userId.Value, id, request, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/members")]
+    public async Task<IActionResult> AddMember(Guid id, InviteProjectMemberRequest request, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await projectService.InviteUserToProjectAsync(userId.Value, id, request, cancellationToken));
     }
 
     [HttpDelete("{projectId:guid}/members/{memberId:guid}")]

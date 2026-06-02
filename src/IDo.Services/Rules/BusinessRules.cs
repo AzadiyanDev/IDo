@@ -14,7 +14,9 @@ public static class HabitRules
 
     public static int CalculateStreak(Habit habit, DateOnly throughDate)
     {
-        var logsByDate = habit.Logs.ToDictionary(x => x.Date, x => x);
+        var logsByDate = habit.Logs
+            .GroupBy(x => x.Date)
+            .ToDictionary(x => x.Key, x => x.OrderByDescending(log => log.UpdatedAtUtc ?? log.CompletedAtUtc ?? log.CreatedAtUtc).First());
         var streak = 0;
         for (var date = throughDate; date >= throughDate.AddDays(-365); date = date.AddDays(-1))
         {
@@ -35,7 +37,11 @@ public static class HabitRules
     {
         var activeDates = EachDate(from, to).Where(date => IsScheduledActiveDay(habit, date)).ToArray();
         if (activeDates.Length == 0) return 0;
-        var done = habit.Logs.Count(x => activeDates.Contains(x.Date) && x.Status == HabitLogStatus.Done);
+        var done = habit.Logs
+            .Where(x => activeDates.Contains(x.Date) && x.Status == HabitLogStatus.Done)
+            .Select(x => x.Date)
+            .Distinct()
+            .Count();
         return decimal.Round(done * 100m / activeDates.Length, 2);
     }
 

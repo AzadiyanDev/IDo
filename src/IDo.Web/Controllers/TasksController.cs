@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IDo.Web.Controllers;
 
 [Route("api/tasks")]
-public sealed class TasksController(ICurrentUserService currentUser, ITaskService taskService, IUnitOfWork unitOfWork) : ApiControllerBase(currentUser)
+public sealed class TasksController(ICurrentUserService currentUser, ITaskService taskService, ITaskRequestService taskRequestService, IUnitOfWork unitOfWork) : ApiControllerBase(currentUser)
 {
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
@@ -43,6 +43,14 @@ public sealed class TasksController(ICurrentUserService currentUser, ITaskServic
         var userId = CurrentUserId();
         if (userId.Result is not null) return userId.Result;
         return Ok(await taskService.CompleteTaskAsync(userId.Value, id, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/status")]
+    public async Task<IActionResult> ChangeStatus(Guid id, ChangeTaskStatusRequest request, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await taskService.ChangeStatusAsync(userId.Value, id, request.Status, cancellationToken));
     }
 
     [HttpPost("{id:guid}/archive")]
@@ -89,10 +97,20 @@ public sealed class TasksController(ICurrentUserService currentUser, ITaskServic
         return Ok(await taskService.AddCommentAsync(userId.Value, id, request, cancellationToken));
     }
 
+    [HttpPost("{id:guid}/assign")]
+    public async Task<IActionResult> Assign(Guid id, RequestAssignTaskRequest request, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await taskRequestService.SendTaskAssignmentRequestAsync(userId.Value, id, request, cancellationToken));
+    }
+
     [HttpGet("{id:guid}/comments")]
     public async Task<IActionResult> Comments(Guid id, CancellationToken cancellationToken)
     {
-        var comments = await unitOfWork.TaskComments.ListAsync(x => x.TaskId == id, cancellationToken);
-        return Ok(comments.OrderBy(x => x.CreatedAtUtc).Select(x => x.ToDto()));
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        var details = await taskService.GetTaskDetailsAsync(userId.Value, id, cancellationToken);
+        return Ok(details.Comments);
     }
 }

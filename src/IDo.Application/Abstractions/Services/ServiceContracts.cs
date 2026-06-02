@@ -42,10 +42,14 @@ public interface IHabitService
 public interface IProjectService
 {
     Task<ProjectDto> CreateProjectAsync(Guid ownerUserId, CreateProjectRequest request, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<ProjectDto>> GetMyProjectsAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<ProjectDto> UpdateProjectAsync(Guid userId, Guid projectId, UpdateProjectRequest request, CancellationToken cancellationToken = default);
     Task ArchiveProjectAsync(Guid userId, Guid projectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<UserSearchResultDto>> SearchUsersByUsernameAsync(Guid userId, Guid projectId, string query, int take = 10, CancellationToken cancellationToken = default);
+    Task<TaskRequestDto> InviteUserToProjectAsync(Guid userId, Guid projectId, InviteProjectMemberRequest request, CancellationToken cancellationToken = default);
     Task<ProjectSectionDto> AddSectionAsync(Guid userId, Guid projectId, CreateProjectSectionRequest request, CancellationToken cancellationToken = default);
     Task<ProjectSectionDto> UpdateSectionAsync(Guid userId, Guid projectId, Guid sectionId, CreateProjectSectionRequest request, CancellationToken cancellationToken = default);
+    Task<TaskRequestDto> RequestAssignSectionAsync(Guid userId, Guid projectId, Guid sectionId, RequestAssignSectionRequest request, CancellationToken cancellationToken = default);
     Task<ProjectMemberDto> AddMemberAsync(Guid userId, Guid projectId, AddProjectMemberRequest request, CancellationToken cancellationToken = default);
     Task RemoveMemberAsync(Guid userId, Guid projectId, Guid memberId, CancellationToken cancellationToken = default);
     Task<ProjectDetailsDto> GetProjectDetailsAsync(Guid userId, Guid projectId, CancellationToken cancellationToken = default);
@@ -55,6 +59,7 @@ public interface IProjectService
 public interface ITaskRequestService
 {
     Task<TaskRequestDto> SendTaskRequestAsync(Guid senderUserId, SendTaskRequestRequest request, CancellationToken cancellationToken = default);
+    Task<TaskRequestDto> SendTaskAssignmentRequestAsync(Guid senderUserId, Guid taskId, RequestAssignTaskRequest request, CancellationToken cancellationToken = default);
     Task<TaskRequestDto> AcceptTaskRequestAsync(Guid receiverUserId, Guid requestId, string? responseNote, CancellationToken cancellationToken = default);
     Task<TaskRequestDto> RejectTaskRequestAsync(Guid receiverUserId, Guid requestId, string? responseNote, CancellationToken cancellationToken = default);
     Task<TaskRequestDto> CancelTaskRequestAsync(Guid senderUserId, Guid requestId, CancellationToken cancellationToken = default);
@@ -84,6 +89,8 @@ public interface IProjectPermissionService
     Task<bool> CanViewProjectAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> CanManageProjectAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> CanCreateTaskInSectionAsync(Guid projectId, Guid? sectionId, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> CanEditSectionAsync(Guid projectId, Guid sectionId, Guid userId, CancellationToken cancellationToken = default);
+    Task<bool> CanViewTaskAsync(Guid taskId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> CanEditTaskAsync(Guid taskId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> CanCompleteTaskAsync(Guid taskId, Guid userId, CancellationToken cancellationToken = default);
     Task<bool> CanManageMembersAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default);
