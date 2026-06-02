@@ -1,4 +1,5 @@
 using IDo.Domain.Entities;
+using IDo.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,15 +17,18 @@ public sealed class IDoTaskConfiguration : IEntityTypeConfiguration<IDoTask>
         builder.Property(x => x.Icon).HasMaxLength(64);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
         builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.AssignmentStatus).HasConversion<string>().HasMaxLength(32).HasDefaultValue(ProjectTaskAssignmentStatus.None);
         builder.Property(x => x.IsCountableInProgress).HasDefaultValue(true);
         builder.Property(x => x.IsDeleted).HasDefaultValue(false);
         builder.HasOne(x => x.CreatorUser).WithMany(x => x.Tasks).HasForeignKey(x => x.CreatorUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.AssigneeUser).WithMany().HasForeignKey(x => x.AssigneeUserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.PendingAssigneeUser).WithMany().HasForeignKey(x => x.PendingAssigneeUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Project).WithMany(x => x.Tasks).HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Section).WithMany(x => x.Tasks).HasForeignKey(x => x.SectionId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Habit).WithMany(x => x.GeneratedTasks).HasForeignKey(x => x.HabitId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => new { x.CreatorUserId, x.DueDate });
         builder.HasIndex(x => new { x.AssigneeUserId, x.Status });
+        builder.HasIndex(x => new { x.PendingAssigneeUserId, x.AssignmentStatus });
         builder.HasIndex(x => new { x.ProjectId, x.SectionId });
     }
 }

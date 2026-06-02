@@ -14,6 +14,7 @@ public sealed class ProjectMemberConfiguration : IEntityTypeConfiguration<Projec
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
         builder.HasOne(x => x.Project).WithMany(x => x.Members).HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.User).WithMany(x => x.ProjectMemberships).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.InvitedByUser).WithMany().HasForeignKey(x => x.InvitedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => new { x.ProjectId, x.UserId }).IsUnique();
         builder.HasIndex(x => new { x.UserId, x.Status });
     }

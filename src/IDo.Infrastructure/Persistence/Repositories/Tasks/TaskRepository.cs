@@ -14,8 +14,9 @@ public sealed class TaskRepository(IDoDbContext dbContext, IDateTimeProvider dat
     public async Task<IReadOnlyList<IDoTask>> GetTodayTasksAsync(Guid userId, DateOnly date, CancellationToken cancellationToken = default) =>
         await ActiveTasks
             .Where(x => x.Status != IDoTaskStatus.Archived
-                && (x.CreatorUserId == userId || x.AssigneeUserId == userId)
-                && (x.DueDate == date || (x.AssigneeUserId == userId && x.Type == IDoTaskType.Project)))
+                && (x.CreatorUserId == userId || x.AssigneeUserId == userId || x.SentRequests.Any(r => r.Type == CollaborationRequestType.TaskAssignment && r.Status == TaskRequestStatus.Accepted && r.ReceiverUserId == userId))
+                && (x.DueDate == date || ((x.AssigneeUserId == userId || x.SentRequests.Any(r => r.Type == CollaborationRequestType.TaskAssignment && r.Status == TaskRequestStatus.Accepted && r.ReceiverUserId == userId)) && x.Type == IDoTaskType.Project)))
+            .Include(x => x.SentRequests)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<IDoTask>> GetPersonalTasksByDateAsync(Guid userId, DateOnly date, CancellationToken cancellationToken = default) =>
@@ -30,29 +31,34 @@ public sealed class TaskRepository(IDoDbContext dbContext, IDateTimeProvider dat
         await ActiveTasks
             .Where(x => x.Type == IDoTaskType.Project
                 && x.Status != IDoTaskStatus.Archived
-                && (x.DueDate == date || x.AssigneeUserId == userId)
-                && (x.CreatorUserId == userId
-                    || x.AssigneeUserId == userId
-                    || x.Project!.Members.Any(m => m.UserId == userId && m.Status == ProjectMemberStatus.Active)))
+                && x.DueDate == date
+                && (x.AssigneeUserId == userId || x.SentRequests.Any(r => r.Type == CollaborationRequestType.TaskAssignment && r.Status == TaskRequestStatus.Accepted && r.ReceiverUserId == userId)))
+            .Include(x => x.SentRequests)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<IDoTask>> GetAssignedTasksAsync(Guid userId, CancellationToken cancellationToken = default) =>
         await ActiveTasks
-            .Where(x => x.AssigneeUserId == userId && x.Status != IDoTaskStatus.Archived)
+            .Where(x => (x.AssigneeUserId == userId || x.SentRequests.Any(r => r.Type == CollaborationRequestType.TaskAssignment && r.Status == TaskRequestStatus.Accepted && r.ReceiverUserId == userId)) && x.Status != IDoTaskStatus.Archived)
+            .Include(x => x.SentRequests)
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<IDoTask>> GetOverdueTasksAsync(Guid userId, DateOnly date, CancellationToken cancellationToken = default) =>
         await ActiveTasks
-            .Where(x => (x.CreatorUserId == userId || x.AssigneeUserId == userId)
+            .Where(x => (x.CreatorUserId == userId || x.AssigneeUserId == userId || x.SentRequests.Any(r => r.Type == CollaborationRequestType.TaskAssignment && r.Status == TaskRequestStatus.Accepted && r.ReceiverUserId == userId))
                 && x.DueDate < date
                 && x.Status != IDoTaskStatus.Done
                 && x.Status != IDoTaskStatus.Archived)
+            .Include(x => x.SentRequests)
             .ToListAsync(cancellationToken);
 
     public Task<IDoTask?> GetTaskWithCommentsAsync(Guid taskId, CancellationToken cancellationToken = default) =>
         ActiveTasks
+            .Include(x => x.Project)
+            .Include(x => x.Section)
+            .Include(x => x.CreatorUser)
+            .Include(x => x.AssigneeUser)
             .Include(x => x.Comments)
             .ThenInclude(x => x.User)
-            .Include(x => x.SentRequests.Where(r => r.Status == TaskRequestStatus.Pending))
+            .Include(x => x.SentRequests.Where(r => r.Type == CollaborationRequestType.TaskAssignment && (r.Status == TaskRequestStatus.Pending || r.Status == TaskRequestStatus.Accepted)))
             .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
 }

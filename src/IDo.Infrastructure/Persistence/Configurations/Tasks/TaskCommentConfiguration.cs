@@ -11,6 +11,7 @@ public sealed class TaskCommentConfiguration : IEntityTypeConfiguration<TaskComm
         builder.ToTable("TaskComments", IDoDatabaseSchema.Name);
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Body).HasMaxLength(2000).IsRequired();
+        builder.Property(x => x.IsDeleted).HasDefaultValue(false);
         builder.HasOne(x => x.Task).WithMany(x => x.Comments).HasForeignKey(x => x.TaskId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => new { x.TaskId, x.CreatedAtUtc });

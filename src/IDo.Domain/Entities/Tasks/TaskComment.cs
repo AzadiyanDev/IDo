@@ -9,4 +9,5 @@ public sealed class TaskComment : AuditableEntity
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public string Body { get; set; } = string.Empty;
+    public bool IsDeleted { get; set; }
 }

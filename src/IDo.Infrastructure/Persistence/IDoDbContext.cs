@@ -28,8 +28,8 @@ public sealed class IDoDbContext(DbContextOptions<IDoDbContext> options, IDateTi
         modelBuilder.HasDefaultSchema(IDoDatabaseSchema.Name);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IDoDbContext).Assembly);
         modelBuilder.Entity<IDoTask>().HasQueryFilter(x => !x.IsDeleted);
-        modelBuilder.Entity<TaskComment>().HasQueryFilter(x => !x.Task.IsDeleted);
-        modelBuilder.Entity<TaskRequest>().HasQueryFilter(x => !x.Task.IsDeleted);
+        modelBuilder.Entity<TaskComment>().HasQueryFilter(x => !x.Task.IsDeleted && !x.IsDeleted);
+        modelBuilder.Entity<TaskRequest>().HasQueryFilter(x => x.Task == null || !x.Task.IsDeleted);
         modelBuilder.Entity<Habit>().HasQueryFilter(x => !x.IsDeleted);
         modelBuilder.Entity<HabitLog>().HasQueryFilter(x => !x.Habit.IsDeleted);
         modelBuilder.Entity<HabitScheduleDay>().HasQueryFilter(x => !x.Habit.IsDeleted);
