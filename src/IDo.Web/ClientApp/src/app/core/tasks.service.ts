@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { TaskDto } from './today.service';
+import type { ProjectTaskAssignmentStatus, TaskDto, TaskRequestDto, TaskStatus } from './today.service';
 
 export interface CreateTaskRequest {
   title: string;
@@ -15,7 +15,30 @@ export interface CreateTaskRequest {
   projectId: string | null;
   sectionId: string | null;
   habitId: string | null;
+  priority: number | null;
   isCountableInProgress: boolean;
+}
+
+export interface TaskCommentDto {
+  id: string;
+  taskId: string;
+  userId: string;
+  userDisplayName: string;
+  userAvatarUrl: string | null;
+  body: string;
+  createdAtUtc: string;
+  updatedAtUtc: string | null;
+}
+
+export interface TaskDetailsDto {
+  task: TaskDto;
+  projectTitle: string | null;
+  sectionTitle: string | null;
+  assigneeDisplayName: string | null;
+  creatorDisplayName: string | null;
+  assignmentStatus: ProjectTaskAssignmentStatus;
+  comments: TaskCommentDto[];
+  pendingRequests: TaskRequestDto[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,5 +47,21 @@ export class TasksService {
 
   createPersonalTask(request: CreateTaskRequest): Promise<TaskDto> {
     return firstValueFrom(this.http.post<TaskDto>('/api/tasks', request, { withCredentials: true }));
+  }
+
+  getTaskDetails(id: string): Promise<TaskDetailsDto> {
+    return firstValueFrom(this.http.get<TaskDetailsDto>(`/api/tasks/${id}`, { withCredentials: true }));
+  }
+
+  changeStatus(id: string, status: TaskStatus): Promise<TaskDto> {
+    return firstValueFrom(this.http.post<TaskDto>(`/api/tasks/${id}/status`, { status }, { withCredentials: true }));
+  }
+
+  addComment(id: string, body: string): Promise<TaskCommentDto> {
+    return firstValueFrom(this.http.post<TaskCommentDto>(`/api/tasks/${id}/comments`, { body }, { withCredentials: true }));
+  }
+
+  assignTask(id: string, receiverUserId: string, message: string | null = null): Promise<TaskRequestDto> {
+    return firstValueFrom(this.http.post<TaskRequestDto>(`/api/tasks/${id}/assign`, { receiverUserId, message }, { withCredentials: true }));
   }
 }

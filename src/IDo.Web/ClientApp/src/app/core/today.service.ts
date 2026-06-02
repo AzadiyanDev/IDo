@@ -2,8 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
-export type TaskStatus = 'Todo' | 'InProgress' | 'Done' | 'Archived';
-export type TaskType = 'Personal' | 'Project';
+export type TaskStatus = 'Todo' | 'InProgress' | 'Review' | 'Done' | 'Overdue' | 'Archived' | 0 | 1 | 2 | 3 | 4 | 5;
+export type TaskType = 'Personal' | 'Project' | 0 | 1 | 2;
+export type ProjectTaskAssignmentStatus = 'None' | 'Pending' | 'Accepted' | 'Rejected' | 0 | 1 | 2 | 3;
+export type CollaborationRequestType = 'ProjectInvite' | 'SectionAssignment' | 'TaskAssignment' | 0 | 1 | 2;
+export type TaskRequestStatus = 'Pending' | 'Accepted' | 'Rejected' | 'Cancelled' | 0 | 1 | 2 | 3;
 
 export interface TaskDto {
   id: string;
@@ -18,10 +21,17 @@ export interface TaskDto {
   type: TaskType;
   creatorUserId: string;
   assigneeUserId: string | null;
+  pendingAssigneeUserId: string | null;
+  assignedUserIds: string[];
+  pendingAssigneeUserIds: string[];
   projectId: string | null;
   sectionId: string | null;
   habitId: string | null;
+  assignmentStatus: ProjectTaskAssignmentStatus;
+  priority: number | null;
   isCountableInProgress: boolean;
+  createdAtUtc: string;
+  updatedAtUtc: string | null;
   completedAtUtc: string | null;
 }
 
@@ -44,7 +54,7 @@ export interface ProjectDto {
   description: string | null;
   color: string | null;
   icon: string | null;
-  status: string;
+  status: string | number;
   archivedAtUtc: string | null;
 }
 
@@ -56,11 +66,18 @@ export interface TodayProjectDto {
 
 export interface TaskRequestDto {
   id: string;
-  taskId: string;
+  type: CollaborationRequestType;
+  projectId: string | null;
+  sectionId: string | null;
+  taskId: string | null;
   senderUserId: string;
   receiverUserId: string;
-  status: string;
+  status: TaskRequestStatus;
+  title: string;
   message: string | null;
+  createdAtUtc: string;
+  respondedAtUtc: string | null;
+  responseNote: string | null;
 }
 
 export interface TodaySummaryDto {

@@ -113,23 +113,23 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
           @for (task of visibleTasks(); track task.id) {
             <a [routerLink]="['/task', task.id]" class="bg-theme-surface rounded-2xl border border-theme-border p-md flex items-center gap-md cursor-pointer hover:bg-surface-container-high transition-colors no-underline text-inherit">
               <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200"
-                [class.border-primary-container]="task.status === 'Done'"
-                [class.bg-primary-container]="task.status === 'Done'"
-                [class.border-theme-border]="task.status !== 'Done'">
-                @if (task.status === 'Done') {
+                [class.border-primary-container]="isTaskDone(task)"
+                [class.bg-primary-container]="isTaskDone(task)"
+                [class.border-theme-border]="!isTaskDone(task)">
+                @if (isTaskDone(task)) {
                   <span class="material-symbols-outlined text-[14px] text-theme-bg font-bold" style="font-variation-settings: 'FILL' 1;">check</span>
                 }
               </div>
               <div class="flex flex-col flex-1 min-w-0 pl-1">
-                <span class="text-body-lg font-body-lg text-on-surface font-medium truncate" [class.line-through]="task.status === 'Done'">{{ task.title }}</span>
+                <span class="text-body-lg font-body-lg text-on-surface font-medium truncate" [class.line-through]="isTaskDone(task)">{{ task.title }}</span>
                 <span class="text-label-md font-label-md text-primary-container mt-0.5">{{ taskTimeLabel(task) }}</span>
               </div>
               <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                [class.bg-theme-project-bg]="task.type === 'Project'"
-                [class.text-theme-purple]="task.type === 'Project'"
-                [class.bg-surface-container-high]="task.type !== 'Project'"
-                [class.text-primary]="task.type !== 'Project'">
-                <span class="material-symbols-outlined text-[18px]">{{ task.type === 'Project' ? 'assignment' : 'checklist' }}</span>
+                [class.bg-theme-project-bg]="isProjectTask(task)"
+                [class.text-theme-purple]="isProjectTask(task)"
+                [class.bg-surface-container-high]="!isProjectTask(task)"
+                [class.text-primary]="!isProjectTask(task)">
+                <span class="material-symbols-outlined text-[18px]">{{ isProjectTask(task) ? 'assignment' : 'checklist' }}</span>
               </div>
             </a>
           } @empty {
@@ -265,8 +265,16 @@ export class TodayComponent implements OnDestroy {
 
   taskTimeLabel(task: TaskDto): string {
     if (task.dueTime) return task.dueTime.slice(0, 5);
-    if (task.status === 'Done') return 'Done';
-    return task.type === 'Project' ? 'Project task' : 'Todo';
+    if (this.isTaskDone(task)) return 'Done';
+    return this.isProjectTask(task) ? 'Project task' : 'Todo';
+  }
+
+  isTaskDone(task: TaskDto): boolean {
+    return task.status === 'Done' || task.status === 3;
+  }
+
+  isProjectTask(task: TaskDto): boolean {
+    return task.type === 'Project' || task.type === 1;
   }
 
   private async loadToday(): Promise<void> {

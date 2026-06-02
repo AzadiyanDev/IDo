@@ -1,198 +1,879 @@
-import { Component } from '@angular/core';
+import { NgClass } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { HabitDto, HabitsService } from '../../core/habits.service';
+import { ProgressDto, HabitProgressDto, ProgressService, ProjectProgressDto, WeeklyActivityDto } from '../../core/progress.service';
+import { ProjectDto, ProjectsService } from '../../core/projects.service';
+import { TaskDto, TodayDashboardDto, TodayService } from '../../core/today.service';
+
+type RangeMode = 'today' | 'week' | 'month';
+type Tone = 'blue' | 'green' | 'teal' | 'orange' | 'rose' | 'purple';
 
 @Component({
   selector: 'app-progress',
+  imports: [NgClass, RouterLink],
   template: `
-    <header class="bg-theme-bg w-full top-0 flex justify-between items-center px-margin-mobile py-md sticky z-40">
-      <div class="w-10 h-10 flex-shrink-0"></div> <!-- Spacer for centering -->
-      <div class="text-center flex-1 mx-4">
-        <h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary tracking-tight m-0">Progress</h1>
-        <p class="font-label-md text-label-md text-on-surface-variant opacity-80 mt-1 mb-0">Your performance at a glance</p>
-      </div>
-      <div class="flex gap-2 flex-shrink-0">
-        <button class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 transition-opacity active:scale-95 transition-transform">
-          <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">calendar_today</span>
+    <header class="w-full top-0 sticky bg-theme-bg/95 backdrop-blur-md z-40 py-md">
+      <div class="px-margin-mobile flex items-center justify-between gap-md">
+        <div class="min-w-0">
+          <h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface m-0 leading-tight">Progress</h1>
+          <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ headerSubtitle() }}</p>
+        </div>
+        <button type="button" (click)="load()" class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 active:scale-95 transition-all" aria-label="Refresh progress">
+          <span class="material-symbols-outlined" [class.animate-spin]="isLoading()">sync</span>
         </button>
       </div>
     </header>
 
-    <div class="px-margin-mobile space-y-md pb-md">
-      <!-- Time Range Selector -->
-      <div class="flex bg-theme-surface p-1 rounded-full border border-theme-border">
-        <button class="flex-1 py-2 px-4 rounded-full font-label-md text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none outline-none bg-transparent">Day</button>
-        <button class="flex-1 py-2 px-4 rounded-full font-label-md bg-theme-elevated text-theme-teal transition-colors shadow-sm cursor-pointer border-none outline-none">Week</button>
-        <button class="flex-1 py-2 px-4 rounded-full font-label-md text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer border-none outline-none bg-transparent">Month</button>
-      </div>
+    <div class="px-margin-mobile flex flex-col gap-lg pb-md">
+      <section class="flex bg-theme-surface p-1 rounded-full border border-theme-border">
+        @for (item of rangeOptions; track item.value) {
+          <button
+            type="button"
+            (click)="range.set(item.value)"
+            class="flex-1 h-10 rounded-full text-label-md font-label-md transition-all flex items-center justify-center gap-xs"
+            [ngClass]="range() === item.value ? 'bg-theme-elevated text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'">
+            <span class="material-symbols-outlined text-[17px]">{{ item.icon }}</span>
+            {{ item.label }}
+          </button>
+        }
+      </section>
 
-      <!-- Weekly Progress Card -->
-      <div class="bg-theme-surface rounded-[24px] p-lg border border-theme-border flex flex-col items-center justify-center relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--color-theme-teal),_transparent)]"></div>
-        
-        <div class="relative w-40 h-40 flex items-center justify-center mb-6">
-          <svg class="w-full h-full absolute top-0 left-0" viewBox="0 0 100 100">
-            <!-- Background Ring -->
-            <circle cx="50" cy="50" fill="none" r="45" stroke="#26324A" stroke-linecap="round" stroke-width="8"></circle>
-            <!-- Progress Ring -->
-            <circle cx="50" cy="50" fill="none" r="45" stroke="#5EEAD4" stroke-dasharray="282.7" stroke-dashoffset="67.8" stroke-linecap="round" stroke-width="8" class="transform -rotate-90 origin-center"></circle>
-          </svg>
-          <div class="flex flex-col items-center text-center">
-            <span class="font-display text-theme-teal">76%</span>
-            <span class="font-label-md text-on-surface-variant mt-1">Completion</span>
-          </div>
-        </div>
-        
-        <h3 class="font-headline-md text-on-surface mb-md z-10 text-center m-0 mt-2">42 items completed this week</h3>
-        
-        <div class="flex w-full justify-between gap-2 z-10 mt-4">
-          <div class="flex flex-col items-center bg-theme-elevated rounded-xl p-3 flex-1 border border-theme-border/50">
-            <span class="font-headline-md text-theme-blue">28</span>
-            <span class="font-label-md text-on-surface-variant">Tasks</span>
-          </div>
-          <div class="flex flex-col items-center bg-theme-elevated rounded-xl p-3 flex-1 border border-theme-border/50">
-            <span class="font-headline-md text-theme-green">12</span>
-            <span class="font-label-md text-on-surface-variant">Habits</span>
-          </div>
-          <div class="flex flex-col items-center bg-theme-elevated rounded-xl p-3 flex-1 border border-theme-border/50">
-            <span class="font-headline-md text-theme-purple-bright">2</span>
-            <span class="font-label-md text-on-surface-variant">Projects</span>
-          </div>
-        </div>
-      </div>
+      @if (error()) {
+        <section class="rounded-2xl border border-error/40 bg-error-container/30 text-on-error-container px-md py-sm text-body-md font-body-md">
+          {{ error() }}
+        </section>
+      }
 
-      <!-- Insight Card -->
-      <div class="bg-theme-surface rounded-[24px] p-md flex gap-4 items-start border border-theme-border shadow-sm">
-        <div class="w-10 h-10 rounded-full bg-theme-teal/20 flex-shrink-0 flex items-center justify-center">
-          <span class="material-symbols-outlined text-theme-teal" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
-        </div>
-        <div>
-          <h4 class="font-body-md font-semibold text-theme-teal mb-1 m-0">Weekly Insight</h4>
-          <p class="font-body-md text-on-surface/90 leading-relaxed m-0 mt-1">You were most productive on Wednesday. Small consistent progress is better than a perfect day.</p>
-        </div>
-      </div>
-
-      <!-- Quick Stats Grid -->
-      <div class="grid grid-cols-2 gap-sm">
-        <div class="bg-theme-surface rounded-[24px] p-md border border-theme-border flex flex-col relative overflow-hidden">
-          <div class="w-8 h-8 rounded-full bg-theme-blue/10 flex items-center justify-center mb-3">
-            <span class="material-symbols-outlined text-theme-blue text-sm">task_alt</span>
-          </div>
-          <span class="font-label-md text-on-surface-variant mb-1">Done Tasks</span>
-          <div class="flex items-end gap-2 text-on-surface">
-            <span class="font-headline-lg-mobile leading-none">28</span>
-            <span class="font-label-md text-theme-blue mb-1 flex items-center leading-none"><span class="material-symbols-outlined text-[10px] mr-1">trending_up</span>12%</span>
-          </div>
-        </div>
-
-        <div class="bg-theme-surface rounded-[24px] p-md border border-theme-border flex flex-col">
-          <div class="w-8 h-8 rounded-full bg-theme-green/10 flex items-center justify-center mb-3">
-            <span class="material-symbols-outlined text-theme-green text-sm">cycle</span>
-          </div>
-          <span class="font-label-md text-on-surface-variant mb-1">Habit Success</span>
-          <div class="flex items-end gap-2 text-on-surface">
-            <span class="font-headline-lg-mobile leading-none">84%</span>
-            <span class="font-label-md text-theme-green mb-1 flex items-center leading-none"><span class="material-symbols-outlined text-[10px] mr-1">trending_up</span>6%</span>
-          </div>
-        </div>
-
-        <div class="bg-theme-surface rounded-[24px] p-md border border-theme-border flex flex-col">
-          <div class="w-8 h-8 rounded-full bg-theme-orange/10 flex items-center justify-center mb-3">
-            <span class="material-symbols-outlined text-theme-orange text-sm">local_fire_department</span>
-          </div>
-          <span class="font-label-md text-on-surface-variant mb-1">Best Streak</span>
-          <div class="flex items-end gap-2 text-on-surface">
-            <span class="font-headline-lg-mobile leading-none">12</span>
-            <span class="font-label-md text-theme-orange mb-1 leading-none">Days</span>
-          </div>
-        </div>
-
-        <div class="bg-theme-surface rounded-[24px] p-md border border-theme-border flex flex-col">
-          <div class="w-8 h-8 rounded-full bg-theme-rose/10 flex items-center justify-center mb-3">
-            <span class="material-symbols-outlined text-theme-rose text-sm">error</span>
-          </div>
-          <span class="font-label-md text-on-surface-variant mb-1">Overdue</span>
-          <div class="flex items-end gap-2 text-on-surface">
-            <span class="font-headline-lg-mobile leading-none">3</span>
-            <span class="font-label-md text-theme-rose mb-1 leading-none">Items</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Weekly Activity Chart -->
-      <div class="bg-theme-surface rounded-[24px] p-lg border border-theme-border mt-md">
-        <h3 class="font-headline-md text-on-surface mb-6 m-0">Activity</h3>
-        <div class="flex justify-between items-end h-40 px-2 mt-4">
-          
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-24 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 40%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 20%"></div>
+      @if (isLoading()) {
+        <section class="bg-theme-surface rounded-2xl border border-theme-border p-lg h-[248px] animate-pulse"></section>
+        <section class="grid grid-cols-2 gap-sm">
+          @for (item of [1, 2, 3, 4]; track item) {
+            <div class="h-[108px] rounded-2xl bg-theme-surface border border-theme-border animate-pulse"></div>
+          }
+        </section>
+        <section class="h-[220px] rounded-2xl bg-theme-surface border border-theme-border animate-pulse"></section>
+      } @else {
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg overflow-hidden">
+          <div class="flex items-start justify-between gap-lg">
+            <div class="min-w-0">
+              <div class="flex items-center gap-xs text-primary mb-xs">
+                <span class="material-symbols-outlined text-[18px]">{{ focusIcon() }}</span>
+                <span class="text-label-md font-label-md uppercase">{{ focusEyebrow() }}</span>
+              </div>
+              <h2 class="text-headline-md font-headline-md text-on-surface m-0">{{ focusTitle() }}</h2>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1 leading-relaxed">{{ focusDescription() }}</p>
             </div>
-            <span class="font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">M</span>
-          </div>
-          
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-24 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 60%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 30%"></div>
+
+            <div class="relative w-[112px] h-[112px] shrink-0">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 42 42">
+                <circle class="fill-none stroke-theme-border" cx="21" cy="21" r="16" stroke-width="4" pathLength="100"></circle>
+                <circle
+                  class="fill-none transition-all duration-500"
+                  cx="21"
+                  cy="21"
+                  r="16"
+                  stroke-width="4"
+                  pathLength="100"
+                  stroke-linecap="round"
+                  [attr.stroke]="focusColor()"
+                  [attr.stroke-dasharray]="focusScore() + ' ' + (100 - focusScore())">
+                </circle>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-display font-display text-on-surface leading-none">{{ focusScore() }}%</span>
+                <span class="text-label-md font-label-md text-on-surface-variant mt-1">{{ focusMetricLabel() }}</span>
+              </div>
             </div>
-            <span class="font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">T</span>
-          </div>
-          
-          <!-- Highlighted -->
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-32 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative shadow-[0_0_15px_rgba(125,211,252,0.2)] border border-theme-blue/30">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 70%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 30%"></div>
-            </div>
-            <span class="font-label-md text-theme-teal font-bold">W</span>
           </div>
 
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-24 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 50%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 25%"></div>
+          <div class="grid grid-cols-4 gap-sm border-t border-theme-border mt-lg pt-md">
+            @for (item of heroStats(); track item.label) {
+              <div class="min-w-0">
+                <p class="text-label-md font-label-md text-on-surface-variant m-0 truncate">{{ item.label }}</p>
+                <p class="text-body-lg font-body-lg text-on-surface font-semibold m-0 mt-1 truncate">{{ item.value }}</p>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="bg-theme-elevated border border-theme-border rounded-2xl p-md flex items-start gap-md">
+          <div class="w-10 h-10 rounded-full bg-theme-teal/15 flex items-center justify-center text-theme-teal shrink-0">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+          </div>
+          <div class="min-w-0">
+            <h3 class="text-body-md font-body-md text-theme-teal font-semibold m-0">Performance signal</h3>
+            <p class="text-body-md font-body-md text-on-surface m-0 mt-1 leading-relaxed">{{ primaryInsight() }}</p>
+          </div>
+        </section>
+
+        <section class="grid grid-cols-2 gap-sm">
+          @for (card of kpiCards(); track card.label) {
+            <div class="bg-theme-surface border border-theme-border rounded-2xl p-md min-h-[112px] flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-sm">
+                <span class="text-label-md font-label-md text-on-surface-variant">{{ card.label }}</span>
+                <span class="material-symbols-outlined text-[19px]" [ngClass]="toneTextClass(card.tone)">{{ card.icon }}</span>
+              </div>
+              <div>
+                <p class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface m-0 leading-none">{{ card.value }}</p>
+                <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-2 leading-tight">{{ card.detail }}</p>
+              </div>
             </div>
-            <span class="font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">T</span>
-          </div>
+          }
+        </section>
 
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-24 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 45%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 40%"></div>
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
+          <div class="flex items-center justify-between gap-md mb-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">Work Mix</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">Today's completion by category</p>
             </div>
-            <span class="font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">F</span>
+            <span class="text-label-md font-label-md text-primary">{{ completedToday() }}/{{ totalToday() }} done</span>
           </div>
 
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-24 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 20%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 20%"></div>
+          <div class="flex flex-col gap-md">
+            @for (category of categoryMetrics(); track category.key) {
+              <div>
+                <div class="flex items-center justify-between gap-md mb-xs">
+                  <div class="flex items-center gap-sm min-w-0">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" [style.background]="category.surface">
+                      <span class="material-symbols-outlined text-[18px]" [style.color]="category.color">{{ category.icon }}</span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-body-md font-body-md text-on-surface font-semibold m-0 truncate">{{ category.label }}</p>
+                      <p class="text-label-md font-label-md text-on-surface-variant m-0">{{ category.done }} of {{ category.total }}</p>
+                    </div>
+                  </div>
+                  <span class="text-label-md font-label-md text-on-surface-variant shrink-0">{{ category.percentage }}%</span>
+                </div>
+                <div class="h-2 bg-surface-container-high rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-500" [style.width.%]="category.percentage" [style.background]="category.color"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
+          <div class="flex items-center justify-between gap-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">Weekly Trend</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ weeklyCompletionLabel() }} since {{ weekStartLabel() }}</p>
             </div>
-            <span class="font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">S</span>
-          </div>
-
-          <div class="flex flex-col items-center gap-2 group">
-            <div class="w-8 md:w-10 h-24 bg-theme-elevated rounded-full flex flex-col-reverse overflow-hidden relative">
-              <div class="w-full bg-theme-blue rounded-b-full transition-all duration-500 ease-out" style="height: 10%"></div>
-              <div class="w-full bg-theme-green transition-all duration-500 ease-out" style="height: 10%"></div>
+            <div class="flex items-center gap-xs text-label-md font-label-md" [ngClass]="trendSignal().toneClass">
+              <span class="material-symbols-outlined text-[18px]">{{ trendSignal().icon }}</span>
+              {{ trendSignal().label }}
             </div>
-            <span class="font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">S</span>
           </div>
 
-        </div>
-        <div class="flex justify-center gap-4 mt-6">
-          <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-theme-blue"></div>
-            <span class="font-label-md text-on-surface-variant">Tasks</span>
+          <div class="flex items-end justify-between gap-xs h-[148px] mt-lg">
+            @for (day of weeklyDays(); track day.key) {
+              <div class="flex-1 min-w-0 flex flex-col items-center gap-xs">
+                <div class="w-full h-[108px] flex items-end justify-center">
+                  <div class="w-7 max-w-full rounded-full bg-theme-elevated border border-theme-border flex items-end overflow-hidden" [class.border-primary]="day.isToday">
+                    <div class="w-full rounded-full transition-all duration-500" [style.height.%]="day.height" [style.background]="day.isToday ? '#00E6F6' : '#3EAEFF'"></div>
+                  </div>
+                </div>
+                <span class="text-label-md font-label-md" [class.text-primary]="day.isToday" [class.text-on-surface-variant]="!day.isToday">{{ day.label }}</span>
+                <span class="text-[10px] leading-none text-on-surface-variant">{{ day.value }}</span>
+              </div>
+            }
           </div>
-          <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-theme-green"></div>
-            <span class="font-label-md text-on-surface-variant">Habits</span>
-          </div>
-        </div>
-      </div>
 
+          <div class="grid grid-cols-3 gap-sm border-t border-theme-border mt-md pt-md">
+            <div>
+              <p class="text-label-md font-label-md text-on-surface-variant m-0">Best day</p>
+              <p class="text-body-md font-body-md text-on-surface font-semibold m-0 mt-1">{{ bestDay().label }} - {{ bestDay().value }}</p>
+            </div>
+            <div>
+              <p class="text-label-md font-label-md text-on-surface-variant m-0">Consistency</p>
+              <p class="text-body-md font-body-md text-on-surface font-semibold m-0 mt-1">{{ weekConsistency() }}%</p>
+            </div>
+            <div>
+              <p class="text-label-md font-label-md text-on-surface-variant m-0">Average</p>
+              <p class="text-body-md font-body-md text-on-surface font-semibold m-0 mt-1">{{ weeklyAverageLabel() }}/day</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
+          <div class="flex items-center justify-between gap-md mb-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">Process Flow</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">Scope, execution, recovery, review</p>
+            </div>
+            <span class="material-symbols-outlined text-primary">account_tree</span>
+          </div>
+
+          <div class="flex flex-col">
+            @for (step of processSteps(); track step.label; let last = $last) {
+              <div class="flex gap-md">
+                <div class="flex flex-col items-center">
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center" [ngClass]="toneSurfaceClass(step.tone)">
+                    <span class="material-symbols-outlined text-[19px]" [ngClass]="toneTextClass(step.tone)">{{ step.icon }}</span>
+                  </div>
+                  <div class="w-px flex-1 bg-theme-border my-xs" [class.hidden]="last"></div>
+                </div>
+                <div class="flex-1 min-w-0 pb-md" [class.pb-0]="last">
+                  <div class="flex items-center justify-between gap-md">
+                    <h4 class="text-body-lg font-body-lg text-on-surface m-0">{{ step.label }}</h4>
+                    <span class="text-body-md font-body-md text-on-surface font-semibold shrink-0">{{ step.value }}</span>
+                  </div>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1 leading-relaxed">{{ step.detail }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-md">
+          <div class="flex items-center justify-between gap-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">Habit Reliability</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ averageHabitRate() }}% average success</p>
+            </div>
+            <div class="text-right">
+              <p class="text-label-md font-label-md text-on-surface-variant m-0">Best streak</p>
+              <p class="text-body-lg font-body-lg text-theme-orange font-semibold m-0">{{ bestHabitStreak() }} day{{ bestHabitStreak() === 1 ? '' : 's' }}</p>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-sm">
+            @for (habit of habitRows(); track habit.id) {
+              <div class="bg-theme-surface border border-theme-border rounded-2xl p-md flex items-center gap-md">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" [style.background]="habit.surface">
+                  <span class="material-symbols-outlined text-[20px]" [style.color]="habit.color">{{ habit.icon }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-md">
+                    <h4 class="text-body-lg font-body-lg text-on-surface m-0 truncate">{{ habit.title }}</h4>
+                    <span class="text-label-md font-label-md shrink-0" [ngClass]="habit.statusTone">{{ habit.status }}</span>
+                  </div>
+                  <div class="flex items-center gap-sm mt-xs">
+                    <div class="h-2 bg-surface-container-high rounded-full overflow-hidden flex-1">
+                      <div class="h-full rounded-full bg-theme-green transition-all duration-500" [style.width.%]="habit.successRate"></div>
+                    </div>
+                    <span class="text-label-md font-label-md text-on-surface-variant w-10 text-right">{{ habit.successRate }}%</span>
+                  </div>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1">{{ habit.completedActiveDays }}/{{ habit.totalActiveDays }} active days - {{ habit.currentStreak }} current streak</p>
+                </div>
+              </div>
+            } @empty {
+              <div class="bg-theme-surface border border-theme-border rounded-2xl p-lg text-center text-on-surface-variant">
+                No habit progress is available for this month yet.
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-md">
+          <div class="flex items-center justify-between gap-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">Project Delivery</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ portfolioDone() }}/{{ portfolioTotal() }} project tasks completed</p>
+            </div>
+            <div class="relative w-[58px] h-[58px] flex items-center justify-center shrink-0">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 42 42">
+                <circle class="fill-none stroke-theme-border" cx="21" cy="21" r="16" stroke-width="4" pathLength="100"></circle>
+                <circle class="fill-none stroke-theme-project-accent" cx="21" cy="21" r="16" stroke-width="4" pathLength="100" stroke-linecap="round" [attr.stroke-dasharray]="averageProjectProgress() + ' ' + (100 - averageProjectProgress())"></circle>
+              </svg>
+              <span class="absolute text-label-md font-label-md text-on-surface">{{ averageProjectProgress() }}%</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-sm">
+            @for (project of projectRows(); track project.id) {
+              <a [routerLink]="['/project', project.id]" class="bg-theme-surface border border-theme-border rounded-2xl p-md flex items-center gap-md no-underline text-inherit active:scale-[0.98] transition-transform">
+                <div class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0" [style.background]="project.surface">
+                  <span class="material-symbols-outlined text-[20px]" [style.color]="project.color">{{ project.icon }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-md">
+                    <h4 class="text-body-lg font-body-lg text-on-surface m-0 truncate">{{ project.title }}</h4>
+                    <span class="text-label-md font-label-md text-on-surface-variant shrink-0">{{ project.percentage }}%</span>
+                  </div>
+                  <div class="h-2 bg-surface-container-high rounded-full overflow-hidden mt-xs">
+                    <div class="h-full rounded-full transition-all duration-500" [style.width.%]="project.percentage" [style.background]="project.color"></div>
+                  </div>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1">{{ project.doneCount }}/{{ project.totalCount }} done - {{ project.status }}</p>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </a>
+            } @empty {
+              <div class="bg-theme-surface border border-theme-border rounded-2xl p-lg text-center text-on-surface-variant">
+                No project progress is available yet.
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
+          <div class="flex items-center justify-between gap-md mb-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">Recovery Queue</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ overdueTasks().length }} overdue item{{ overdueTasks().length === 1 ? '' : 's' }}</p>
+            </div>
+            <span class="material-symbols-outlined" [ngClass]="overdueTasks().length > 0 ? 'text-theme-rose' : 'text-theme-green'">{{ overdueTasks().length > 0 ? 'warning' : 'check_circle' }}</span>
+          </div>
+
+          <div class="flex flex-col gap-sm">
+            @for (task of overduePreview(); track task.id) {
+              <a [routerLink]="['/task', task.id]" class="border border-theme-border rounded-2xl p-md no-underline text-inherit flex items-center gap-md hover:bg-surface-container-high transition-colors">
+                <div class="w-9 h-9 rounded-full bg-theme-rose/15 flex items-center justify-center text-theme-rose shrink-0">
+                  <span class="material-symbols-outlined text-[19px]">priority_high</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-body-md font-body-md text-on-surface m-0 font-semibold truncate">{{ task.title }}</p>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1 truncate">{{ overdueSubtitle(task) }}</p>
+                </div>
+                <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+              </a>
+            } @empty {
+              <div class="border border-theme-border rounded-2xl p-md flex items-center gap-md">
+                <div class="w-9 h-9 rounded-full bg-theme-green/15 flex items-center justify-center text-theme-green shrink-0">
+                  <span class="material-symbols-outlined text-[19px]">done_all</span>
+                </div>
+                <div>
+                  <p class="text-body-md font-body-md text-on-surface m-0 font-semibold">No overdue work</p>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1">Recovery is clear for today.</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
     </div>
   `
 })
-export class ProgressComponent {}
+export class ProgressComponent {
+  private readonly progressService = inject(ProgressService);
+  private readonly todayService = inject(TodayService);
+  private readonly habitsService = inject(HabitsService);
+  private readonly projectsService = inject(ProjectsService);
+  private readonly today = new Date();
+  private readonly todayKey = this.formatDate(this.today);
+  private readonly weekStartKey = this.formatDate(this.startOfWeek(this.today));
+  private readonly monthStartKey = this.formatDate(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
+
+  readonly rangeOptions: { value: RangeMode; label: string; icon: string }[] = [
+    { value: 'today', label: 'Today', icon: 'today' },
+    { value: 'week', label: 'Week', icon: 'query_stats' },
+    { value: 'month', label: 'Month', icon: 'calendar_month' }
+  ];
+  readonly range = signal<RangeMode>('week');
+  readonly isLoading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly dashboard = signal<TodayDashboardDto | null>(null);
+  readonly todayProgress = signal<ProgressDto | null>(null);
+  readonly weeklyActivity = signal<WeeklyActivityDto | null>(null);
+  readonly weeklyDashboards = signal<Record<string, TodayDashboardDto>>({});
+  readonly habitProgress = signal<HabitProgressDto[]>([]);
+  readonly projectProgress = signal<ProjectProgressDto[]>([]);
+  readonly habits = signal<HabitDto[]>([]);
+  readonly projects = signal<ProjectDto[]>([]);
+  readonly overdueTasks = signal<TaskDto[]>([]);
+
+  readonly summary = computed(() => this.dashboard()?.summary ?? null);
+  readonly totalToday = computed(() => this.summary()
+    ? this.summary()!.personalTaskCount + this.summary()!.habitCount + this.summary()!.projectTaskCount
+    : 0);
+  readonly completedToday = computed(() => this.summary()?.doneCount ?? 0);
+  readonly leftToday = computed(() => Math.max(0, this.totalToday() - this.completedToday()));
+  readonly todayCompletion = computed(() => this.clampPercent(Math.round(this.summary()?.donePercentage ?? 0)));
+  readonly todayTaskCompletion = computed(() => this.clampPercent(Math.round(this.todayProgress()?.percentage ?? 0)));
+  readonly averageHabitRate = computed(() => this.average(this.habitProgress().map(item => item.successRate)));
+  readonly bestHabitStreak = computed(() => Math.max(0, ...this.habitProgress().map(item => item.bestStreak)));
+  readonly portfolioDone = computed(() => this.projectProgress().reduce((sum, item) => sum + item.doneCount, 0));
+  readonly portfolioTotal = computed(() => this.projectProgress().reduce((sum, item) => sum + item.totalCount, 0));
+  readonly averageProjectProgress = computed(() => this.average(this.projectProgress().filter(item => item.totalCount > 0).map(item => item.percentage)));
+
+  readonly categoryMetrics = computed<CategoryMetric[]>(() => {
+    const summary = this.summary();
+    const personalDone = summary?.personalTaskDoneCount ?? 0;
+    const habitDone = summary?.habitDoneCount ?? 0;
+    const projectDone = summary?.projectTaskDoneCount ?? 0;
+    const personalTotal = summary?.personalTaskCount ?? 0;
+    const habitTotal = summary?.habitCount ?? 0;
+    const projectTotal = summary?.projectTaskCount ?? 0;
+
+    return [
+      this.categoryMetric('personal', 'Personal Tasks', 'checklist', personalDone, personalTotal, '#3EAEFF', 'rgba(62, 174, 255, 0.14)'),
+      this.categoryMetric('habits', 'Habits', 'repeat', habitDone, habitTotal, '#00F4B9', 'rgba(0, 244, 185, 0.14)'),
+      this.categoryMetric('projects', 'Project Tasks', 'assignment', projectDone, projectTotal, '#B072FF', 'rgba(176, 114, 255, 0.15)')
+    ];
+  });
+
+  readonly weeklyDays = computed<WeeklyDay[]>(() => {
+    const activity = this.weeklyActivity();
+    const start = this.dateFromKey(activity?.weekStartDate ?? this.weekStartKey);
+    const values = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const key = this.formatDate(date);
+      const weeklyDashboard = this.weeklyDashboards()[key];
+      return {
+        key,
+        label: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3),
+        value: weeklyDashboard?.summary.doneCount ?? activity?.completedCountByDate[key] ?? 0,
+        isToday: key === this.todayKey
+      };
+    });
+    const max = Math.max(1, ...values.map(day => day.value));
+    return values.map(day => ({
+      ...day,
+      height: day.value === 0 ? 6 : Math.max(16, Math.round(day.value * 100 / max))
+    }));
+  });
+
+  readonly weeklyTotal = computed(() => this.weeklyDays().reduce((sum, day) => sum + day.value, 0));
+  readonly daysElapsedInWeek = computed(() => this.weeklyDays().filter(day => day.key <= this.todayKey).length || 1);
+  readonly weeklyAverageLabel = computed(() => {
+    const value = this.weeklyTotal() / this.daysElapsedInWeek();
+    return value >= 10 ? `${Math.round(value)}` : value.toFixed(1).replace('.0', '');
+  });
+  readonly weeklyCompletionLabel = computed(() => `${this.weeklyTotal()} completion${this.weeklyTotal() === 1 ? '' : 's'}`);
+  readonly weekConsistency = computed(() => {
+    const elapsedDays = this.weeklyDays().filter(day => day.key <= this.todayKey);
+    if (elapsedDays.length === 0) return 0;
+    return this.clampPercent(Math.round(elapsedDays.filter(day => day.value > 0).length * 100 / elapsedDays.length));
+  });
+  readonly bestDay = computed(() => this.weeklyDays().reduce((best, day) => day.value > best.value ? day : best, this.weeklyDays()[0]));
+  readonly trendSignal = computed(() => {
+    const elapsed = this.weeklyDays().filter(day => day.key <= this.todayKey);
+    const recent = elapsed.slice(-3).reduce((sum, day) => sum + day.value, 0);
+    const previous = elapsed.slice(-6, -3).reduce((sum, day) => sum + day.value, 0);
+    if (recent > previous) return { label: 'Improving', icon: 'trending_up', toneClass: 'text-theme-green' };
+    if (recent < previous) return { label: 'Cooling', icon: 'trending_down', toneClass: 'text-theme-orange' };
+    return { label: 'Stable', icon: 'trending_flat', toneClass: 'text-primary' };
+  });
+
+  readonly focusScore = computed(() => {
+    switch (this.range()) {
+      case 'today':
+        return this.todayCompletion();
+      case 'week':
+        return this.weekConsistency();
+      case 'month':
+        return this.averageHabitRate();
+    }
+  });
+  readonly focusEyebrow = computed(() => {
+    switch (this.range()) {
+      case 'today':
+        return 'Today focus';
+      case 'week':
+        return 'Weekly process';
+      case 'month':
+        return 'Monthly health';
+    }
+  });
+  readonly focusTitle = computed(() => {
+    switch (this.range()) {
+      case 'today':
+        return `${this.completedToday()} of ${this.totalToday()} items completed`;
+      case 'week':
+        return `${this.weeklyCompletionLabel()} this week`;
+      case 'month':
+        return `${this.habitProgress().length} habit${this.habitProgress().length === 1 ? '' : 's'} under review`;
+    }
+  });
+  readonly focusDescription = computed(() => {
+    switch (this.range()) {
+      case 'today':
+        return this.leftToday() === 0 ? 'Today is fully cleared.' : `${this.leftToday()} item${this.leftToday() === 1 ? '' : 's'} left in the current plan.`;
+      case 'week':
+        return `${this.weekConsistency()}% consistency across elapsed week days. ${this.trendSignal().label} output trend.`;
+      case 'month':
+        return `${this.averageHabitRate()}% average habit success with ${this.bestHabitStreak()} day best streak.`;
+    }
+  });
+  readonly focusMetricLabel = computed(() => {
+    switch (this.range()) {
+      case 'today':
+        return 'Complete';
+      case 'week':
+        return 'Consistent';
+      case 'month':
+        return 'Healthy';
+    }
+  });
+  readonly focusIcon = computed(() => {
+    switch (this.range()) {
+      case 'today':
+        return 'target';
+      case 'week':
+        return 'timeline';
+      case 'month':
+        return 'monitoring';
+    }
+  });
+
+  readonly heroStats = computed(() => [
+    { label: 'Done', value: `${this.completedToday()}` },
+    { label: 'Left', value: `${this.leftToday()}` },
+    { label: 'Overdue', value: `${this.overdueTasks().length}` },
+    { label: 'Pending', value: `${this.summary()?.pendingRequestCount ?? 0}` }
+  ]);
+
+  readonly kpiCards = computed<KpiCard[]>(() => [
+    { label: 'Today done', value: `${this.completedToday()}/${this.totalToday()}`, detail: `${this.todayCompletion()}% total completion`, icon: 'task_alt', tone: 'blue' },
+    { label: 'Task score', value: `${this.todayTaskCompletion()}%`, detail: `${this.todayProgress()?.doneCount ?? 0}/${this.todayProgress()?.totalCount ?? 0} countable tasks`, icon: 'fact_check', tone: 'teal' },
+    { label: 'Habit health', value: `${this.averageHabitRate()}%`, detail: `${this.bestHabitStreak()} day best streak`, icon: 'repeat', tone: 'green' },
+    { label: 'Project flow', value: `${this.averageProjectProgress()}%`, detail: `${this.portfolioDone()}/${this.portfolioTotal()} tasks delivered`, icon: 'account_tree', tone: 'purple' }
+  ]);
+
+  readonly processSteps = computed<ProcessStep[]>(() => [
+    {
+      label: 'Scope',
+      value: `${this.totalToday()} item${this.totalToday() === 1 ? '' : 's'}`,
+      detail: this.totalToday() === 0 ? 'No scheduled work is blocking today.' : `${this.categoryMetrics().filter(item => item.total > 0).length} active work stream${this.categoryMetrics().filter(item => item.total > 0).length === 1 ? '' : 's'} in today's plan.`,
+      icon: 'view_list',
+      tone: 'blue'
+    },
+    {
+      label: 'Execution',
+      value: `${this.completedToday()} done`,
+      detail: `${this.todayCompletion()}% of the planned work is complete.`,
+      icon: 'bolt',
+      tone: this.todayCompletion() >= 80 ? 'green' : 'teal'
+    },
+    {
+      label: 'Recovery',
+      value: `${this.overdueTasks().length} overdue`,
+      detail: this.overdueTasks().length > 0 ? 'Overdue work is the main risk in the current process.' : 'No overdue items are pulling down the plan.',
+      icon: this.overdueTasks().length > 0 ? 'priority_high' : 'verified',
+      tone: this.overdueTasks().length > 0 ? 'rose' : 'green'
+    },
+    {
+      label: 'Review',
+      value: `${this.weeklyTotal()} weekly`,
+      detail: `${this.bestDay().label} is the strongest day with ${this.bestDay().value} completion${this.bestDay().value === 1 ? '' : 's'}.`,
+      icon: 'analytics',
+      tone: 'purple'
+    }
+  ]);
+
+  readonly habitRows = computed<HabitInsight[]>(() => {
+    const habitMap = new Map(this.habits().map(habit => [habit.id, habit]));
+    return this.habitProgress()
+      .map(progress => {
+        const habit = habitMap.get(progress.habitId);
+        const successRate = this.clampPercent(Math.round(progress.successRate));
+        return {
+          id: progress.habitId,
+          title: habit?.title ?? 'Habit',
+          icon: habit?.icon || 'repeat',
+          color: habit?.color || '#00F4B9',
+          surface: this.colorSurface(habit?.color || '#00F4B9'),
+          completedActiveDays: progress.completedActiveDays,
+          totalActiveDays: progress.totalActiveDays,
+          currentStreak: progress.currentStreak,
+          successRate,
+          status: this.habitStatus(successRate),
+          statusTone: this.habitStatusTone(successRate)
+        };
+      })
+      .sort((left, right) => left.successRate - right.successRate || right.currentStreak - left.currentStreak)
+      .slice(0, 4);
+  });
+
+  readonly projectRows = computed<ProjectInsight[]>(() => {
+    const projectMap = new Map(this.projects().map(project => [project.id, project]));
+    return this.projectProgress()
+      .map(progress => {
+        const project = projectMap.get(progress.projectId);
+        const percentage = this.clampPercent(Math.round(progress.percentage));
+        const color = project?.color || '#B072FF';
+        return {
+          id: progress.projectId,
+          title: project?.title ?? 'Project',
+          icon: project?.icon || 'assignment',
+          color,
+          surface: this.colorSurface(color),
+          doneCount: progress.doneCount,
+          totalCount: progress.totalCount,
+          percentage,
+          status: this.projectStatus(progress, percentage)
+        };
+      })
+      .sort((left, right) => left.percentage - right.percentage || right.totalCount - left.totalCount)
+      .slice(0, 4);
+  });
+
+  readonly overduePreview = computed(() => this.overdueTasks().slice(0, 3));
+
+  constructor() {
+    void this.load();
+  }
+
+  async load(): Promise<void> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    try {
+      const [dashboard, todayProgress, weeklyActivity, weeklyDashboards, habitProgress, projectProgress, habits, projects, overdueTasks] = await Promise.all([
+        this.todayService.getToday(this.todayKey),
+        this.progressService.getTodayProgress(this.todayKey),
+        this.progressService.getWeeklyActivity(this.weekStartKey),
+        this.loadWeeklyDashboards(),
+        this.progressService.getHabitProgress(this.monthStartKey, this.todayKey),
+        this.progressService.getProjectProgress(),
+        this.habitsService.getHabits(),
+        this.projectsService.getProjects(),
+        this.progressService.getOverdueTasks(this.todayKey)
+      ]);
+
+      this.dashboard.set(dashboard);
+      this.todayProgress.set(todayProgress);
+      this.weeklyActivity.set(weeklyActivity);
+      this.weeklyDashboards.set(weeklyDashboards);
+      this.habitProgress.set(habitProgress);
+      this.projectProgress.set(projectProgress);
+      this.habits.set(habits);
+      this.projects.set(projects);
+      this.overdueTasks.set(overdueTasks);
+    } catch (error) {
+      this.error.set(this.messageFromError(error, 'Could not load progress analytics.'));
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  headerSubtitle(): string {
+    return `${this.shortDateLabel(this.today)} - analytics and delivery flow`;
+  }
+
+  primaryInsight(): string {
+    if (this.overdueTasks().length > 0) {
+      return `${this.overdueTasks().length} overdue item${this.overdueTasks().length === 1 ? '' : 's'} should be recovered before adding more scope.`;
+    }
+
+    if (this.todayCompletion() >= 85) {
+      return 'Today is in strong shape. Keep the remaining work narrow and protect the current momentum.';
+    }
+
+    if (this.weekConsistency() < 50 && this.daysElapsedInWeek() > 1) {
+      return 'The week has gaps in execution. A small completion today will improve consistency faster than expanding the plan.';
+    }
+
+    if (this.averageHabitRate() < 60 && this.habitProgress().length > 0) {
+      return 'Habit reliability is the weak point this month. Stabilize the lowest-rate routine first.';
+    }
+
+    return `${this.trendSignal().label} weekly output with ${this.weeklyTotal()} completed item${this.weeklyTotal() === 1 ? '' : 's'} so far.`;
+  }
+
+  focusColor(): string {
+    switch (this.range()) {
+      case 'today':
+        return '#00E6F6';
+      case 'week':
+        return '#3EAEFF';
+      case 'month':
+        return '#00F4B9';
+    }
+  }
+
+  weekStartLabel(): string {
+    return this.shortDateLabel(this.dateFromKey(this.weekStartKey));
+  }
+
+  overdueSubtitle(task: TaskDto): string {
+    const taskType = task.type as TaskDto['type'] | number;
+    const type = taskType === 'Project' || taskType === 1 ? 'Project task' : 'Personal task';
+    return `${type} - due ${task.dueDate ? this.shortDateLabel(this.dateFromKey(task.dueDate)) : 'without date'}`;
+  }
+
+  toneTextClass(tone: Tone): string {
+    switch (tone) {
+      case 'blue':
+        return 'text-theme-blue';
+      case 'green':
+        return 'text-theme-green';
+      case 'teal':
+        return 'text-theme-teal';
+      case 'orange':
+        return 'text-theme-orange';
+      case 'rose':
+        return 'text-theme-rose';
+      case 'purple':
+        return 'text-theme-purple';
+    }
+  }
+
+  toneSurfaceClass(tone: Tone): string {
+    switch (tone) {
+      case 'blue':
+        return 'bg-theme-blue/15';
+      case 'green':
+        return 'bg-theme-green/15';
+      case 'teal':
+        return 'bg-theme-teal/15';
+      case 'orange':
+        return 'bg-theme-orange/15';
+      case 'rose':
+        return 'bg-theme-rose/15';
+      case 'purple':
+        return 'bg-theme-purple/15';
+    }
+  }
+
+  private categoryMetric(key: string, label: string, icon: string, done: number, total: number, color: string, surface: string): CategoryMetric {
+    return {
+      key,
+      label,
+      icon,
+      done,
+      total,
+      color,
+      surface,
+      percentage: total === 0 ? 0 : this.clampPercent(Math.round(done * 100 / total))
+    };
+  }
+
+  private average(values: number[]): number {
+    if (values.length === 0) return 0;
+    return this.clampPercent(Math.round(values.reduce((sum, value) => sum + value, 0) / values.length));
+  }
+
+  private habitStatus(successRate: number): string {
+    if (successRate >= 80) return 'Reliable';
+    if (successRate >= 55) return 'Watch';
+    return 'At risk';
+  }
+
+  private habitStatusTone(successRate: number): string {
+    if (successRate >= 80) return 'text-theme-green';
+    if (successRate >= 55) return 'text-theme-orange';
+    return 'text-theme-rose';
+  }
+
+  private projectStatus(progress: ProjectProgressDto, percentage: number): string {
+    if (progress.totalCount === 0) return 'No tasks yet';
+    if (percentage >= 90) return 'Almost done';
+    if (percentage >= 50) return 'Moving';
+    return `${Math.max(0, progress.totalCount - progress.doneCount)} left`;
+  }
+
+  private colorSurface(color: string): string {
+    if (!color.startsWith('#') || color.length !== 7) return 'rgba(255, 255, 255, 0.08)';
+    const red = parseInt(color.slice(1, 3), 16);
+    const green = parseInt(color.slice(3, 5), 16);
+    const blue = parseInt(color.slice(5, 7), 16);
+    return `rgba(${red}, ${green}, ${blue}, 0.14)`;
+  }
+
+  private async loadWeeklyDashboards(): Promise<Record<string, TodayDashboardDto>> {
+    const entries = await Promise.all(this.weekKeys().map(async key => [key, await this.todayService.getToday(key)] as const));
+    return Object.fromEntries(entries);
+  }
+
+  private weekKeys(): string[] {
+    const weekStart = this.dateFromKey(this.weekStartKey);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + index);
+      return this.formatDate(date);
+    });
+  }
+
+  private startOfWeek(date: Date): Date {
+    const weekStart = new Date(date);
+    const dayOffset = (weekStart.getDay() + 6) % 7;
+    weekStart.setDate(weekStart.getDate() - dayOffset);
+    return weekStart;
+  }
+
+  private shortDateLabel(date: Date): string {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  private dateFromKey(key: string): Date {
+    const [year, month, day] = key.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private clampPercent(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(100, value));
+  }
+
+  private messageFromError(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error as { errors?: string[]; error?: string } | null;
+      if (Array.isArray(body?.errors) && body.errors.length > 0) return body.errors.join(' ');
+      if (body?.error) return body.error;
+    }
+
+    return fallback;
+  }
+}
+
+interface CategoryMetric {
+  key: string;
+  label: string;
+  icon: string;
+  done: number;
+  total: number;
+  color: string;
+  surface: string;
+  percentage: number;
+}
+
+interface WeeklyDay {
+  key: string;
+  label: string;
+  value: number;
+  height: number;
+  isToday: boolean;
+}
+
+interface KpiCard {
+  label: string;
+  value: string;
+  detail: string;
+  icon: string;
+  tone: Tone;
+}
+
+interface ProcessStep {
+  label: string;
+  value: string;
+  detail: string;
+  icon: string;
+  tone: Tone;
+}
+
+interface HabitInsight {
+  id: string;
+  title: string;
+  icon: string;
+  color: string;
+  surface: string;
+  completedActiveDays: number;
+  totalActiveDays: number;
+  currentStreak: number;
+  successRate: number;
+  status: string;
+  statusTone: string;
+}
+
+interface ProjectInsight {
+  id: string;
+  title: string;
+  icon: string;
+  color: string;
+  surface: string;
+  doneCount: number;
+  totalCount: number;
+  percentage: number;
+  status: string;
+}

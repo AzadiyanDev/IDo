@@ -50,10 +50,10 @@ import { TaskDto, TodayDashboardDto, TodayService } from '../../core/today.servi
           @for (task of tasks(); track task.id) {
             <a [routerLink]="['/task', task.id]" class="bg-theme-surface rounded-2xl border border-theme-border p-md flex items-center gap-md cursor-pointer hover:bg-surface-container-high transition-colors no-underline text-inherit">
               <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0"
-                [class.border-primary-container]="task.status === 'Done'"
-                [class.bg-primary-container]="task.status === 'Done'"
-                [class.border-theme-border]="task.status !== 'Done'">
-                @if (task.status === 'Done') {
+                [class.border-primary-container]="isTaskDone(task)"
+                [class.bg-primary-container]="isTaskDone(task)"
+                [class.border-theme-border]="!isTaskDone(task)">
+                @if (isTaskDone(task)) {
                   <span class="material-symbols-outlined text-[14px] text-theme-bg font-bold" style="font-variation-settings: 'FILL' 1;">check</span>
                 }
               </div>
@@ -93,7 +93,15 @@ export class TasksComponent {
 
   taskLabel(task: TaskDto): string {
     if (task.dueTime) return task.dueTime.slice(0, 5);
-    return task.type === 'Project' ? 'Project' : 'Todo';
+    return this.isProjectTask(task) ? 'Project' : 'Todo';
+  }
+
+  isTaskDone(task: TaskDto): boolean {
+    return task.status === 'Done' || task.status === 3;
+  }
+
+  isProjectTask(task: TaskDto): boolean {
+    return task.type === 'Project' || task.type === 1;
   }
 
   private async load(): Promise<void> {

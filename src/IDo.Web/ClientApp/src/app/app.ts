@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, signal, inject } from '@angular/cor
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BottomNavComponent } from './shared/bottom-nav/bottom-nav';
-import { CreateNewModalComponent } from './shared/create-new-modal/create-new-modal';
+import { CreateNewModalComponent, CreateNewMode } from './shared/create-new-modal/create-new-modal';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,17 +15,18 @@ import { CreateNewModalComponent } from './shared/create-new-modal/create-new-mo
       </main>
       
       @if (showBottomNav()) {
-        <app-bottom-nav (addClicked)="isCreateModalOpen.set(true)"></app-bottom-nav>
+        <app-bottom-nav (addClicked)="openCreateModal()"></app-bottom-nav>
       }
 
       @if (isCreateModalOpen()) {
-        <app-create-new-modal (closeClicked)="isCreateModalOpen.set(false)"></app-create-new-modal>
+        <app-create-new-modal [mode]="createMode()" (closeClicked)="isCreateModalOpen.set(false)"></app-create-new-modal>
       }
     </div>
   `
 })
 export class App {
   isCreateModalOpen = signal(false);
+  createMode = signal<CreateNewMode>('task');
   showBottomNav = signal(true);
   router = inject(Router);
 
@@ -41,5 +42,15 @@ export class App {
                       event.urlAfterRedirects.includes('/register');
       this.showBottomNav.set(!hideNav);
     });
+  }
+
+  openCreateModal(): void {
+    const mode = this.router.url.startsWith('/habits')
+      ? 'habit'
+      : this.router.url.startsWith('/projects')
+        ? 'project'
+        : 'task';
+    this.createMode.set(mode);
+    this.isCreateModalOpen.set(true);
   }
 }
