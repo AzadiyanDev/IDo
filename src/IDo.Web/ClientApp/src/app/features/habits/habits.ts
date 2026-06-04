@@ -1,5 +1,7 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { CalendarService } from '../../core/calendar.service';
+import { I18nService } from '../../core/i18n.service';
 import { HabitDto, HabitsService } from '../../core/habits.service';
 import { TodayDashboardDto, TodayService } from '../../core/today.service';
 import { CreateNewModalComponent } from '../../shared/create-new-modal/create-new-modal';
@@ -13,8 +15,8 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
     <header class="w-full top-0 sticky bg-theme-bg z-40 py-md">
       <div class="px-margin-mobile flex items-center justify-between">
         <div class="min-w-0">
-          <h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface m-0">Habits</h1>
-          <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">Build small routines, every day.</p>
+          <h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface m-0">{{ i18n.text('Habits') }}</h1>
+          <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ i18n.text('Build small routines, every day.') }}</p>
         </div>
         <button type="button" (click)="openCreateHabit()" class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 active:scale-95 transition-all">
           <span class="material-symbols-outlined">add</span>
@@ -27,22 +29,22 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
         <div class="absolute -top-10 -right-10 w-32 h-32 bg-theme-green/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="flex items-center justify-between gap-lg">
           <div class="min-w-0">
-            <h2 class="text-headline-md font-headline-md text-on-surface m-0">Today's Progress</h2>
-            <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ doneToday() }} of {{ totalToday() }} completed</p>
+            <h2 class="text-headline-md font-headline-md text-on-surface m-0">{{ i18n.text("Today's Progress") }}</h2>
+            <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ completedTodayLabel() }}</p>
             <div class="flex gap-sm mt-md pt-xs items-center">
               <div class="flex flex-col">
                 <span class="text-headline-lg-mobile font-headline-lg-mobile text-primary">{{ totalToday() }}</span>
-                <span class="text-label-md font-label-md text-on-surface-variant">Total</span>
+                <span class="text-label-md font-label-md text-on-surface-variant">{{ i18n.text('Total') }}</span>
               </div>
               <div class="w-px h-8 bg-theme-border"></div>
               <div class="flex flex-col">
                 <span class="text-headline-lg-mobile font-headline-lg-mobile text-secondary">{{ doneToday() }}</span>
-                <span class="text-label-md font-label-md text-on-surface-variant">Done</span>
+                <span class="text-label-md font-label-md text-on-surface-variant">{{ i18n.text('Done') }}</span>
               </div>
               <div class="w-px h-8 bg-theme-border"></div>
               <div class="flex flex-col">
                 <span class="text-headline-lg-mobile font-headline-lg-mobile text-primary">{{ leftToday() }}</span>
-                <span class="text-label-md font-label-md text-on-surface-variant">Left</span>
+                <span class="text-label-md font-label-md text-on-surface-variant">{{ i18n.text('Left') }}</span>
               </div>
             </div>
           </div>
@@ -58,15 +60,15 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
         <div class="snap-start shrink-0 min-w-[132px] bg-theme-surface border border-theme-border rounded-2xl p-md flex flex-col gap-xs">
           <div class="flex items-center gap-xs">
             <span class="material-symbols-outlined text-theme-orange text-[20px]" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
-            <span class="text-label-md font-label-md text-on-surface-variant">Best Streak</span>
+            <span class="text-label-md font-label-md text-on-surface-variant">{{ i18n.text('Best Streak') }}</span>
           </div>
-          <div class="text-headline-md font-headline-md text-on-surface mt-1">{{ bestStreak() }} Days</div>
+          <div class="text-headline-md font-headline-md text-on-surface mt-1">{{ bestStreakLabel() }}</div>
         </div>
 
         <div class="snap-start shrink-0 min-w-[132px] bg-theme-surface border border-theme-border rounded-2xl p-md flex flex-col gap-xs">
           <div class="flex items-center gap-xs">
             <span class="material-symbols-outlined text-secondary text-[20px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
-            <span class="text-label-md font-label-md text-on-surface-variant">Active</span>
+            <span class="text-label-md font-label-md text-on-surface-variant">{{ i18n.text('Active') }}</span>
           </div>
           <div class="text-headline-md font-headline-md text-on-surface mt-1">{{ activeHabits() }}</div>
         </div>
@@ -74,14 +76,14 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
         <div class="snap-start shrink-0 min-w-[132px] bg-theme-surface border border-theme-border rounded-2xl p-md flex flex-col gap-xs">
           <div class="flex items-center gap-xs">
             <span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">insert_chart</span>
-            <span class="text-label-md font-label-md text-on-surface-variant">Success</span>
+            <span class="text-label-md font-label-md text-on-surface-variant">{{ i18n.text('Success') }}</span>
           </div>
           <div class="text-headline-md font-headline-md text-on-surface mt-1">{{ donePercentage() }}%</div>
         </div>
       </section>
 
       <section class="flex flex-col gap-sm">
-        <h3 class="text-[28px] leading-[34px] font-semibold text-on-surface m-0">Weekly Plan</h3>
+        <h3 class="text-[28px] leading-[34px] font-semibold text-on-surface m-0">{{ i18n.text('Weekly Plan') }}</h3>
         <div class="grid grid-cols-7 items-center gap-xs bg-[#111827] rounded-[32px] px-md py-lg border border-[#2d3a56] min-h-[132px] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
           @for (day of weeklyPlan(); track day.key) {
             <div
@@ -153,8 +155,8 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
 
       <section class="flex flex-col gap-md">
         <div class="flex items-center justify-between gap-md">
-          <h3 class="text-headline-md font-headline-md text-on-surface m-0">Habit List</h3>
-          <span class="text-label-md font-label-md text-on-surface-variant">{{ filteredHabits().length }} shown</span>
+          <h3 class="text-headline-md font-headline-md text-on-surface m-0">{{ i18n.text('Habit List') }}</h3>
+          <span class="text-label-md font-label-md text-on-surface-variant">{{ shownLabel(filteredHabits().length) }}</span>
         </div>
 
         <div class="flex gap-sm overflow-x-auto hide-scrollbar pb-xs -mx-margin-mobile px-margin-mobile">
@@ -169,7 +171,7 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
               [class.bg-theme-surface]="filter() !== item.value"
               [class.text-on-surface-variant]="filter() !== item.value"
               [class.border-theme-border]="filter() !== item.value">
-              {{ item.label }} {{ filterCount(item.value) }}
+              {{ i18n.text(item.label) }} {{ filterCount(item.value) }}
             </button>
           }
         </div>
@@ -231,7 +233,7 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
               </div>
             } @empty {
               <div class="bg-theme-surface rounded-2xl border border-theme-border p-lg text-center text-on-surface-variant">
-                No habits match this view.
+                {{ i18n.text('No habits match this view.') }}
               </div>
             }
           }
@@ -241,8 +243,8 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
       <div class="bg-secondary-container/10 border border-secondary/20 rounded-2xl p-md flex items-start gap-md">
         <span class="material-symbols-outlined text-secondary shrink-0" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
         <div>
-          <h4 class="text-body-md font-body-md text-on-surface font-semibold m-0 leading-tight">Small wins compound.</h4>
-          <p class="text-label-md font-label-md text-on-surface-variant mt-1 m-0">Do one honest rep today and make tomorrow easier to start.</p>
+          <h4 class="text-body-md font-body-md text-on-surface font-semibold m-0 leading-tight">{{ i18n.text('Small wins compound.') }}</h4>
+          <p class="text-label-md font-label-md text-on-surface-variant mt-1 m-0">{{ i18n.text('Do one honest rep today and make tomorrow easier to start.') }}</p>
         </div>
       </div>
     </div>
@@ -253,11 +255,12 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
   `
 })
 export class HabitsComponent implements OnDestroy {
+  private readonly calendar = inject(CalendarService);
+  readonly i18n = inject(I18nService);
   private readonly habitsService = inject(HabitsService);
   private readonly todayService = inject(TodayService);
   private readonly today = new Date();
-  private readonly todayKey = this.formatDate(this.today);
-  private readonly currentWeek = this.buildCurrentWeek(this.today);
+  private readonly todayKey = this.calendar.todayKey();
   private readonly habitCreatedHandler = () => void this.load();
 
   readonly habits = signal<HabitDto[]>([]);
@@ -275,15 +278,26 @@ export class HabitsComponent implements OnDestroy {
     { value: 'done', label: 'Done' },
     { value: 'rest', label: 'Rest' }
   ];
-  readonly weekDays = [
-    { value: 1, label: 'M' },
-    { value: 2, label: 'T' },
-    { value: 3, label: 'W' },
-    { value: 4, label: 'T' },
-    { value: 5, label: 'F' },
-    { value: 6, label: 'S' },
-    { value: 0, label: 'S' }
-  ];
+  readonly currentWeek = computed(() => this.buildCurrentWeek(this.today));
+  readonly weekDays = computed(() => this.calendar.calendarType() === 'Jalali' || this.i18n.language() === 'fa'
+    ? [
+        { value: 6, label: 'ش' },
+        { value: 0, label: 'ی' },
+        { value: 1, label: 'د' },
+        { value: 2, label: 'س' },
+        { value: 3, label: 'چ' },
+        { value: 4, label: 'پ' },
+        { value: 5, label: 'ج' }
+      ]
+    : [
+        { value: 1, label: 'M' },
+        { value: 2, label: 'T' },
+        { value: 3, label: 'W' },
+        { value: 4, label: 'T' },
+        { value: 5, label: 'F' },
+        { value: 6, label: 'S' },
+        { value: 0, label: 'S' }
+      ]);
   readonly todayHabitMap = computed(() => new Map((this.dashboard()?.todayHabits ?? []).map(habit => [habit.id, habit])));
   readonly habitViews = computed(() => this.habits().map(habit => this.toHabitView(habit)));
   readonly filteredHabits = computed(() => {
@@ -308,7 +322,7 @@ export class HabitsComponent implements OnDestroy {
   readonly progressRing = computed(() => `conic-gradient(var(--color-secondary) ${this.donePercentage()}%, var(--color-theme-border) 0)`);
   readonly bestStreak = computed(() => Math.max(0, ...this.habits().map(habit => habit.bestStreak)));
   readonly activeHabits = computed(() => this.habits().filter(habit => habit.isActive).length);
-  readonly weeklyPlan = computed<WeeklyPlanDay[]>(() => this.currentWeek.map(day => {
+  readonly weeklyPlan = computed<WeeklyPlanDay[]>(() => this.currentWeek().map(day => {
     const dashboard = this.weeklyDashboards()[day.key];
     const total = dashboard?.summary.habitCount ?? this.habits().filter(habit => this.isHabitActiveOn(habit, day.value)).length;
     const done = dashboard?.summary.habitDoneCount ?? 0;
@@ -342,17 +356,33 @@ export class HabitsComponent implements OnDestroy {
       await this.habitsService.completeHabit(habit.id, this.todayKey);
       await this.load(false);
     } catch (error) {
-      this.error.set(this.messageFromError(error, 'Could not complete habit.'));
+      this.error.set(this.messageFromError(error, this.i18n.text('Could not complete habit.')));
     } finally {
       this.completingId.set(null);
     }
   }
 
   habitSubtitle(habit: HabitView): string {
-    if (habit.isCompletedToday) return 'Completed today';
-    if (habit.isRestToday) return 'Rest day';
-    if (habit.reminderTime) return `Reminder ${habit.reminderTime.slice(0, 5)}`;
+    if (habit.isCompletedToday) return this.i18n.text('Completed today');
+    if (habit.isRestToday) return this.i18n.text('Rest day');
+    if (habit.reminderTime) return this.i18n.language() === 'fa' ? `یادآور ${habit.reminderTime.slice(0, 5)}` : `Reminder ${habit.reminderTime.slice(0, 5)}`;
     return this.activeDayLabel(habit);
+  }
+
+  completedTodayLabel(): string {
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.doneToday())} از ${this.i18n.number(this.totalToday())} تکمیل شده`
+      : `${this.doneToday()} of ${this.totalToday()} completed`;
+  }
+
+  bestStreakLabel(): string {
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.bestStreak())} روز`
+      : `${this.bestStreak()} Days`;
+  }
+
+  shownLabel(count: number): string {
+    return this.i18n.language() === 'fa' ? `${this.i18n.number(count)} نمایش` : `${count} shown`;
   }
 
   filterCount(filter: HabitFilter): number {
@@ -385,7 +415,7 @@ export class HabitsComponent implements OnDestroy {
       this.dashboard.set(dashboard);
       this.weeklyDashboards.set(weeklyDashboards);
     } catch (error) {
-      this.error.set(this.messageFromError(error, 'Could not load habits.'));
+      this.error.set(this.messageFromError(error, this.i18n.text('Could not load habits.')));
     } finally {
       this.isLoading.set(false);
     }
@@ -409,30 +439,28 @@ export class HabitsComponent implements OnDestroy {
   }
 
   private activeDayLabel(habit: HabitDto): string {
-    const activeDays = this.weekDays.filter(day => habit.activeDays.includes(day.value)).map(day => day.label);
-    if (activeDays.length === 7) return 'Every day';
-    if (activeDays.length === 0) return 'No active days';
+    const activeDays = this.weekDays().filter(day => habit.activeDays.includes(day.value)).map(day => day.label);
+    if (activeDays.length === 7) return this.i18n.text('Every day');
+    if (activeDays.length === 0) return this.i18n.text('No active days');
     return activeDays.join(' ');
   }
 
   private async loadWeeklyDashboards(): Promise<Record<string, TodayDashboardDto>> {
-    const entries = await Promise.all(this.currentWeek.map(async day => [day.key, await this.todayService.getToday(day.key)] as const));
+    const entries = await Promise.all(this.currentWeek().map(async day => [day.key, await this.todayService.getToday(day.key)] as const));
     return Object.fromEntries(entries);
   }
 
   private buildCurrentWeek(date: Date): WeekDay[] {
-    const weekStart = new Date(date);
-    const dayOffset = (weekStart.getDay() + 6) % 7;
-    weekStart.setDate(weekStart.getDate() - dayOffset);
+    const weekStart = this.calendar.startOfWeek(date);
 
     return Array.from({ length: 7 }, (_, index) => {
       const item = new Date(weekStart);
       item.setDate(weekStart.getDate() + index);
-      const key = this.formatDate(item);
+      const key = this.calendar.formatDateKey(item);
       return {
         key,
         value: item.getDay(),
-        label: item.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+        label: this.calendar.weekdayLabel(item, true),
         isToday: key === this.todayKey,
         isPast: key < this.todayKey,
         isFuture: key > this.todayKey
@@ -458,12 +486,6 @@ export class HabitsComponent implements OnDestroy {
     return fallback;
   }
 
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
 }
 
 interface HabitView extends HabitDto {
