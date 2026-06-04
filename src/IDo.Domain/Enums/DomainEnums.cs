@@ -14,3 +14,4 @@ public enum ProjectTaskAssignmentStatus { None, Pending, Accepted, Rejected }
 public enum CollaborationRequestType { ProjectInvite, SectionAssignment, TaskAssignment }
 public enum TaskRequestStatus { Pending, Accepted, Rejected, Cancelled }
 public enum NotificationType { HabitReminder, TaskReminder, TaskRequest, ProjectInvite, DeadlineAlert }
+public enum CalendarType { Gregorian, Jalali }
