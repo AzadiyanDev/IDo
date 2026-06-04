@@ -1,0 +1,466 @@
+import { Injectable, computed, effect, inject } from '@angular/core';
+import { AuthService } from './auth.service';
+
+export type AppLanguage = 'en' | 'fa';
+
+const FA_TEXT: Record<string, string> = {
+  'Create account': 'ساخت حساب',
+  'Welcome back': 'خوش برگشتی',
+  'Sign up': 'ثبت‌نام',
+  'Log in': 'ورود',
+  'Username': 'نام کاربری',
+  'Email': 'ایمیل',
+  'Username or email': 'نام کاربری یا ایمیل',
+  'Password': 'رمز عبور',
+  'Hide password': 'پنهان کردن رمز',
+  'Show password': 'نمایش رمز',
+  'Already have an account?': 'حساب داری؟',
+  'New to IDo?': 'تازه به IDo آمدی؟',
+  'Creating account': 'در حال ساخت حساب',
+  'Signing in': 'در حال ورود',
+  'Setting up your IDo workspace': 'در حال آماده‌سازی فضای کاری IDo',
+  'Checking your credentials': 'در حال بررسی اطلاعات ورود',
+  'Authentication failed.': 'ورود ناموفق بود.',
+
+  'Today': 'امروز',
+  'today': 'امروز',
+  'Tomorrow': 'فردا',
+  'Week': 'هفته',
+  'Month': 'ماه',
+  'Date': 'تاریخ',
+  'Reminder': 'یادآور',
+  'No reminder': 'بدون یادآور',
+  'Please wait': 'لطفاً صبر کن',
+  'Working on your request': 'در حال انجام درخواست',
+  'Notification': 'اعلان',
+  'Review': 'بررسی',
+  'Previous month': 'ماه قبل',
+  'Next month': 'ماه بعد',
+
+  'Profile': 'پروفایل',
+  'Settings': 'تنظیمات',
+  'Notifications': 'اعلان‌ها',
+  'Enabled': 'فعال',
+  'Disabled': 'غیرفعال',
+  'Theme': 'ظاهر',
+  'Language': 'زبان',
+  'Calendar type': 'نوع تقویم',
+  'Week starts on': 'شروع هفته',
+  'Edit profile': 'ویرایش پروفایل',
+  'Full name': 'نام کامل',
+  'Phone': 'تلفن',
+  'Save profile': 'ذخیره پروفایل',
+  'Saving...': 'در حال ذخیره...',
+  'Log out?': 'خارج می‌شوی؟',
+  'You will need to sign in again to access your tasks and projects.': 'برای دسترسی به تسک‌ها و پروژه‌ها باید دوباره وارد شوی.',
+  'Cancel': 'لغو',
+  'Log out': 'خروج',
+  'Uploading photo': 'در حال آپلود عکس',
+  'Saving your new profile image': 'در حال ذخیره تصویر پروفایل',
+  'No email set': 'ایمیلی ثبت نشده',
+  'User': 'کاربر',
+  'user': 'کاربر',
+  'there': 'دوست',
+  'Uploading...': 'در حال آپلود...',
+  'Upload complete': 'آپلود کامل شد',
+  'JPG, PNG, or WebP': 'JPG، PNG یا WebP',
+  'Please select an image file.': 'لطفاً یک فایل تصویر انتخاب کن.',
+  'Profile photo updated.': 'عکس پروفایل به‌روزرسانی شد.',
+  'Could not upload profile photo.': 'آپلود عکس پروفایل ناموفق بود.',
+  'Profile updated.': 'پروفایل به‌روزرسانی شد.',
+  'Could not save profile.': 'ذخیره پروفایل ناموفق بود.',
+  'Could not load profile.': 'بارگذاری پروفایل ناموفق بود.',
+  'Settings updated.': 'تنظیمات به‌روزرسانی شد.',
+  'Could not save settings.': 'ذخیره تنظیمات ناموفق بود.',
+  'English': 'انگلیسی',
+  'Persian': 'فارسی',
+  'dark': 'تیره',
+  'light': 'روشن',
+  'system': 'سیستم',
+  'Monday': 'دوشنبه',
+  'Saturday': 'شنبه',
+  'Sunday': 'یکشنبه',
+  'Gregorian': 'میلادی',
+  'Jalali': 'شمسی',
+
+  'Tasks': 'تسک‌ها',
+  'Task': 'تسک',
+  'Task Details': 'جزئیات تسک',
+  'Task unavailable': 'تسک در دسترس نیست',
+  'Task id is missing.': 'شناسه تسک وجود ندارد.',
+  'The task could not be loaded.': 'بارگذاری تسک ناموفق بود.',
+  'No description provided.': 'توضیحی ثبت نشده.',
+  'Information': 'اطلاعات',
+  'Deadline': 'مهلت',
+  'Created': 'ساخته شده',
+  'Completed': 'تکمیل شده',
+  'Project': 'پروژه',
+  'Section': 'بخش',
+  'Status': 'وضعیت',
+  'Creator': 'سازنده',
+  'No comments yet.': 'هنوز نظری ثبت نشده.',
+  'Add a comment...': 'نظر اضافه کن...',
+  'Hold to go back one status': 'برای برگشت به وضعیت قبل نگه دار',
+  'Task Archived': 'تسک آرشیو شد',
+  'Task Completed': 'تسک تکمیل شد',
+  'Hold 2s to start': '۲ ثانیه نگه دار تا شروع شود',
+  'Hold 2s for review': '۲ ثانیه نگه دار برای بررسی',
+  'Hold 2s to mark done': '۲ ثانیه نگه دار برای تکمیل',
+  'Back': 'بازگشت',
+  'Loading': 'در حال بارگذاری',
+  'Project task': 'تسک پروژه',
+  'Personal task': 'تسک شخصی',
+  'Personal todo': 'تسک شخصی',
+  'Created by you': 'ساخته شده توسط تو',
+  'Assigned to you': 'واگذار شده به تو',
+  'Project member': 'عضو پروژه',
+  'Personal': 'شخصی',
+  'No deadline': 'بدون مهلت',
+  'No date': 'بدون تاریخ',
+  'Unknown': 'نامشخص',
+  'just now': 'همین حالا',
+  'Todo': 'تسک',
+  'Todos': 'تسک‌ها',
+  'In Progress': 'در حال انجام',
+  'Done': 'انجام شده',
+  'Streak': 'زنجیره',
+  'Overdue': 'عقب‌افتاده',
+  'Archived': 'آرشیو شده',
+
+  'Your plan for': 'برنامه',
+  'is ready': 'آماده است',
+  'Task request pending': 'درخواست تسک در انتظار است',
+  'request waiting for review': 'درخواست منتظر بررسی است',
+  'requests waiting for review': 'درخواست منتظر بررسی هستند',
+  'Requests waiting in your inbox': 'درخواست‌هایی که در inbox منتظرند',
+  'No pending requests.': 'درخواست در انتظاری نیست.',
+  'Open inbox': 'باز کردن inbox',
+  'items for this day': 'مورد برای این روز',
+  "Today's Tasks": 'تسک‌های امروز',
+  'See All': 'مشاهده همه',
+  'No tasks for this day.': 'برای این روز تسکی نیست.',
+  'No habits today.': 'امروز عادتی نیست.',
+  'No active project tasks today.': 'امروز تسک پروژه فعالی نیست.',
+  'Projects': 'پروژه‌ها',
+  'Inbox': 'Inbox',
+  'done': 'انجام شده',
+  'task': 'تسک',
+  'tasks': 'تسک',
+  'Project tasks': 'تسک‌های پروژه',
+  'Personal Tasks': 'تسک‌های شخصی',
+  'Project Tasks': 'تسک‌های پروژه',
+  'Personal tasks': 'تسک‌های شخصی',
+  'Everything scheduled for the selected day': 'همه چیزهای برنامه‌ریزی‌شده برای روز انتخابی',
+  'All todos today': 'همه تسک‌های امروز',
+  'No todos for this day.': 'برای این روز تسکی نیست.',
+  'total': 'کل',
+
+  'Habits': 'عادت‌ها',
+  'Build small routines, every day.': 'هر روز روتین‌های کوچک بساز.',
+  "Today's Progress": 'پیشرفت امروز',
+  'completed': 'تکمیل شده',
+  'Total': 'کل',
+  'Left': 'مانده',
+  'Best Streak': 'بهترین زنجیره',
+  'Days': 'روز',
+  'Active': 'فعال',
+  'Success': 'موفقیت',
+  'Weekly Plan': 'برنامه هفتگی',
+  'Habit List': 'فهرست عادت‌ها',
+  'shown': 'نمایش داده شده',
+  'All': 'همه',
+  'Open': 'باز',
+  'Rest': 'استراحت',
+  'Complete': 'تکمیل',
+  'completed today': 'امروز تکمیل شد',
+  'Completed today': 'امروز تکمیل شد',
+  'Rest day': 'روز استراحت',
+  'Every day': 'هر روز',
+  'No active days': 'روز فعالی ندارد',
+  'No habits match this view.': 'عادتی با این نما هماهنگ نیست.',
+  'Small wins compound.': 'بردهای کوچک روی هم جمع می‌شوند.',
+  'Do one honest rep today and make tomorrow easier to start.': 'امروز یک قدم واقعی بردار تا شروع فردا آسان‌تر شود.',
+  'Could not load habits.': 'بارگذاری عادت‌ها ناموفق بود.',
+  'Could not complete habit.': 'تکمیل عادت ناموفق بود.',
+
+  'Project Portfolio': 'سبد پروژه‌ها',
+  'Members': 'اعضا',
+  'Owned': 'مالکیت من',
+  'Shared': 'اشتراکی',
+  'Search projects': 'جستجوی پروژه‌ها',
+  'Owned Projects': 'پروژه‌های من',
+  'Shared Projects': 'پروژه‌های اشتراکی',
+  'Archived Projects': 'پروژه‌های آرشیوشده',
+  'My Projects': 'پروژه‌های من',
+  'Loading your workspaces': 'در حال بارگذاری فضاهای کاری',
+  'No projects match your search.': 'پروژه‌ای با جستجوی تو پیدا نشد.',
+  'No archived projects yet.': 'هنوز پروژه آرشیوشده‌ای نیست.',
+  'No shared projects yet.': 'هنوز پروژه اشتراکی‌ای نیست.',
+  'Create your first project to organize related tasks.': 'اولین پروژه را بساز تا تسک‌های مرتبط را منظم کنی.',
+  'Ready for tasks and sections': 'آماده تسک‌ها و بخش‌ها',
+  'New workspace': 'فضای کاری جدید',
+  'Use the bottom plus button here to add a project.': 'برای افزودن پروژه از دکمه مثبت پایین استفاده کن.',
+  'Create': 'ساخت',
+  'Could not load projects.': 'بارگذاری پروژه‌ها ناموفق بود.',
+
+  'Project unavailable': 'پروژه در دسترس نیست',
+  'No project description yet.': 'هنوز توضیحی برای پروژه ثبت نشده.',
+  'Team': 'تیم',
+  'Add': 'افزودن',
+  'Sections': 'بخش‌ها',
+  'pending': 'در انتظار',
+  'Pending': 'در انتظار',
+  'Add section owner': 'افزودن مالک بخش',
+  'Assign section owner': 'واگذاری مالک بخش',
+  'Add task': 'افزودن تسک',
+  'Add task assignee': 'افزودن مسئول تسک',
+  'Assign task': 'واگذاری تسک',
+  'No tasks in this section.': 'در این بخش تسکی نیست.',
+  'Create the first section to start planning tasks.': 'اولین بخش را بساز تا برنامه‌ریزی تسک‌ها شروع شود.',
+  'Search username': 'جستجوی نام کاربری',
+  'Member': 'عضو',
+  'Invite': 'دعوت',
+  'Search by username to invite a member.': 'برای دعوت عضو، نام کاربری را جستجو کن.',
+  'Section title': 'عنوان بخش',
+  'Description': 'توضیح',
+  'Section icon': 'آیکن بخش',
+  'Section color': 'رنگ بخش',
+  'Create Section': 'ساخت بخش',
+  'What task belongs here?': 'چه تسکی به اینجا مربوط است؟',
+  'Task brief (optional)': 'خلاصه تسک (اختیاری)',
+  'Owner': 'مالک',
+  'No owner': 'بدون مالک',
+  'Priority': 'اولویت',
+  '0 to 5': '۰ تا ۵',
+  'Create Task': 'ساخت تسک',
+  'Assign section': 'واگذاری بخش',
+  'Search project people or username': 'جستجوی اعضای پروژه یا نام کاربری',
+  'Sent': 'ارسال شد',
+  'Assigned': 'واگذار شد',
+  'Assignment request sent.': 'درخواست واگذاری ارسال شد.',
+  'Assigned to you.': 'به تو واگذار شد.',
+  'Project invite and assignment request sent.': 'دعوت پروژه و درخواست واگذاری ارسال شد.',
+  'Could not search users.': 'جستجوی کاربران ناموفق بود.',
+  'Could not send invite.': 'ارسال دعوت ناموفق بود.',
+  'Section title is required.': 'عنوان بخش الزامی است.',
+  'Could not create section.': 'ساخت بخش ناموفق بود.',
+  'Task title and section are required.': 'عنوان تسک و بخش الزامی هستند.',
+  'Could not create task.': 'ساخت تسک ناموفق بود.',
+  'Please join this project for the assignment.': 'لطفاً برای این واگذاری به پروژه بپیوند.',
+  'Could not send assignment request.': 'ارسال درخواست واگذاری ناموفق بود.',
+  'Project details': 'جزئیات پروژه',
+  'You': 'تو',
+  'Assign immediately': 'واگذاری فوری',
+  'Project member - requires inbox approval': 'عضو پروژه - نیازمند تأیید inbox',
+  'Invite pending - assignment request will be sent': 'دعوت در انتظار است - درخواست واگذاری ارسال می‌شود',
+  'Not in project - invite and assignment request will be sent': 'عضو پروژه نیست - دعوت و درخواست واگذاری ارسال می‌شود',
+  'No matching users found.': 'کاربری پیدا نشد.',
+  'Search or choose a project member.': 'جستجو کن یا یک عضو پروژه را انتخاب کن.',
+  'Waiting for assignment approval': 'منتظر تأیید واگذاری',
+  'No assigned owner': 'مالکی واگذار نشده',
+  'Accepted': 'پذیرفته شده',
+  'Rejected': 'رد شده',
+  'Add Member': 'افزودن عضو',
+  'Add Section': 'افزودن بخش',
+  'Add Task': 'افزودن تسک',
+  'Assign Owner': 'واگذاری مالک',
+  'Invite by username. Membership starts only after accept.': 'با نام کاربری دعوت کن. عضویت فقط بعد از پذیرش شروع می‌شود.',
+  'Create a project section.': 'یک بخش پروژه بساز.',
+  'Choose a project member or search username.': 'یک عضو پروژه انتخاب کن یا نام کاربری را جستجو کن.',
+  'Sending request': 'در حال ارسال درخواست',
+  'Sending invite': 'در حال ارسال دعوت',
+  'Creating section': 'در حال ساخت بخش',
+  'Creating task': 'در حال ساخت تسک',
+  'Preparing the inbox request': 'در حال آماده‌سازی درخواست inbox',
+  'Inviting this user to the project': 'در حال دعوت کاربر به پروژه',
+  'Adding it to the project': 'در حال افزودن به پروژه',
+  'Adding it to the section': 'در حال افزودن به بخش',
+  'The project could not be loaded.': 'بارگذاری پروژه ناموفق بود.',
+  'member': 'عضو',
+  'Selected section': 'بخش انتخاب‌شده',
+
+  'Request': 'درخواست',
+  'Message': 'پیام',
+  'Open project': 'باز کردن پروژه',
+  'Open task': 'باز کردن تسک',
+  'Hold for 2 seconds': '۲ ثانیه نگه دار',
+  'Accept': 'پذیرش',
+  'Reject': 'رد',
+  'Invites and assignment requests sent to you.': 'دعوت‌ها و درخواست‌های واگذاری ارسال‌شده به تو.',
+  'Inbox is clear': 'Inbox خالی است',
+  'Project invitations and assignment requests will appear here.': 'دعوت‌های پروژه و درخواست‌های واگذاری اینجا نمایش داده می‌شوند.',
+  'Could not respond to request.': 'پاسخ به درخواست ناموفق بود.',
+  'pending requests': 'درخواست در انتظار',
+  'Project Invitation': 'دعوت پروژه',
+  'Section Assignment': 'واگذاری بخش',
+  'Task Assignment': 'واگذاری تسک',
+  'Cancelled': 'لغوشده',
+  'Could not load inbox.': 'بارگذاری inbox ناموفق بود.',
+
+  'Progress': 'پیشرفت',
+  'Refresh progress': 'به‌روزرسانی پیشرفت',
+  'Performance signal': 'سیگنال عملکرد',
+  'Work Mix': 'ترکیب کار',
+  "Today's completion by category": 'تکمیل امروز بر اساس دسته',
+  'Weekly Trend': 'روند هفتگی',
+  'Best day': 'بهترین روز',
+  'Consistency': 'ثبات',
+  'Average': 'میانگین',
+  'Process Flow': 'جریان فرایند',
+  'Scope, execution, recovery, review': 'دامنه، اجرا، بازیابی، بازبینی',
+  'Habit Reliability': 'پایداری عادت‌ها',
+  'Best streak': 'بهترین زنجیره',
+  'Project Delivery': 'تحویل پروژه',
+  'Recovery Queue': 'صف بازیابی',
+  'No overdue work': 'کار عقب‌افتاده‌ای نیست',
+  'Recovery is clear for today.': 'بازیابی برای امروز خالی است.',
+  'No habit progress is available for this month yet.': 'هنوز پیشرفت عادتی برای این ماه وجود ندارد.',
+  'No project progress is available yet.': 'هنوز پیشرفت پروژه‌ای وجود ندارد.',
+  'Could not load progress analytics.': 'بارگذاری تحلیل پیشرفت ناموفق بود.',
+  'Today is fully cleared.': 'امروز کاملاً پاک‌سازی شده است.',
+  'Today is in strong shape. Keep the remaining work narrow and protect the current momentum.': 'امروز وضعیت خوبی دارد. کارهای باقی‌مانده را محدود نگه دار و همین روند را حفظ کن.',
+  'The week has gaps in execution. A small completion today will improve consistency faster than expanding the plan.': 'این هفته در اجرا فاصله‌هایی دارد. یک تکمیل کوچک امروز، ثبات را سریع‌تر از بزرگ کردن برنامه بهتر می‌کند.',
+  'Habit reliability is the weak point this month. Stabilize the lowest-rate routine first.': 'پایداری عادت‌ها نقطه ضعیف این ماه است. اول روتینی را تثبیت کن که کمترین نرخ موفقیت را دارد.',
+  'No scheduled work is blocking today.': 'امروز کار برنامه‌ریزی‌شده‌ای مانع نیست.',
+  'Overdue work is the main risk in the current process.': 'کار عقب‌افتاده ریسک اصلی فرایند فعلی است.',
+  'No overdue items are pulling down the plan.': 'مورد عقب‌افتاده‌ای برنامه را پایین نمی‌کشد.',
+  'Today focus': 'تمرکز امروز',
+  'Weekly process': 'فرایند هفتگی',
+  'Monthly health': 'سلامت ماهانه',
+  'Consistent': 'باثبات',
+  'Healthy': 'سالم',
+  'Today done': 'انجام‌شده امروز',
+  'Task score': 'امتیاز تسک',
+  'Habit health': 'سلامت عادت',
+  'Project flow': 'جریان پروژه',
+  'Scope': 'دامنه',
+  'Execution': 'اجرا',
+  'Recovery': 'بازیابی',
+  'Reliable': 'پایدار',
+  'Watch': 'نیازمند توجه',
+  'At risk': 'پرریسک',
+  'Habit': 'عادت',
+  'Almost done': 'تقریباً تمام',
+  'Moving': 'در حرکت',
+  'No tasks yet': 'هنوز تسکی نیست',
+  'Improving': 'رو به رشد',
+  'Cooling': 'کندتر',
+  'Stable': 'پایدار',
+
+  'Create Habit': 'ساخت عادت',
+  'Create Project': 'ساخت پروژه',
+  'Create New': 'ساخت مورد جدید',
+  'Add a repeatable routine': 'یک روتین تکرارشونده اضافه کن',
+  'Start a project workspace': 'یک فضای کاری پروژه شروع کن',
+  'Add a task for today': 'یک تسک برای امروز اضافه کن',
+  'What routine do you want to build?': 'چه روتینی می‌خواهی بسازی؟',
+  'What project are you starting?': 'چه پروژه‌ای را شروع می‌کنی؟',
+  'What do you need to do?': 'چه کاری باید انجام بدهی؟',
+  'Project brief (optional)': 'خلاصه پروژه (اختیاری)',
+  'Description (optional)': 'توضیح (اختیاری)',
+  'Active days': 'روزهای فعال',
+  'Icon': 'آیکن',
+  'Project icon': 'آیکن پروژه',
+  'Accent': 'رنگ تأکیدی',
+  'Creating habit': 'در حال ساخت عادت',
+  'Creating project': 'در حال ساخت پروژه',
+  'Creating todo': 'در حال ساخت تسک',
+  'Adding it to your routines': 'در حال افزودن به روتین‌ها',
+  'Preparing the workspace': 'در حال آماده‌سازی فضای کاری',
+  'Adding it to today': 'در حال افزودن به امروز',
+  'Task title is required.': 'عنوان تسک الزامی است.',
+  'Habit title is required.': 'عنوان عادت الزامی است.',
+  'Project title is required.': 'عنوان پروژه الزامی است.',
+  'Select at least one active day.': 'حداقل یک روز فعال انتخاب کن.',
+  'Could not create habit.': 'ساخت عادت ناموفق بود.',
+  'Could not create project.': 'ساخت پروژه ناموفق بود.',
+  'Expand create modal': 'باز کردن پنل ساخت'
+};
+
+@Injectable({ providedIn: 'root' })
+export class I18nService {
+  private readonly auth = inject(AuthService);
+  private readonly storageKey = 'ido.language';
+  private readonly initialLanguage = this.readInitialLanguage();
+
+  readonly language = computed<AppLanguage>(() => this.normalizeLanguage(this.auth.currentUser()?.profile.settings.language ?? this.initialLanguage));
+  readonly isRtl = computed(() => this.language() === 'fa');
+  readonly dir = computed<'ltr' | 'rtl'>(() => this.isRtl() ? 'rtl' : 'ltr');
+  readonly locale = computed(() => this.language() === 'fa' ? 'fa-IR' : 'en-US');
+
+  constructor() {
+    effect(() => {
+      const language = this.language();
+      const direction = this.dir();
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = language;
+        document.documentElement.dir = direction;
+        document.body?.classList.toggle('lang-fa', language === 'fa');
+      }
+      this.writeStoredLanguage(language);
+    });
+  }
+
+  text(value: string | number | null | undefined): string {
+    if (value === null || value === undefined) return '';
+    const text = `${value}`;
+    return this.language() === 'fa' ? FA_TEXT[text] ?? text : text;
+  }
+
+  number(value: number): string {
+    return new Intl.NumberFormat(this.locale(), { useGrouping: false }).format(value);
+  }
+
+  count(value: number, singular: string, plural = `${singular}s`): string {
+    const unit = this.language() === 'fa'
+      ? this.text(plural)
+      : value === 1 ? singular : plural;
+    return `${this.number(value)} ${unit}`;
+  }
+
+  languageLabel(value: string): string {
+    return this.normalizeLanguage(value) === 'fa' ? this.text('Persian') : this.text('English');
+  }
+
+  relativeTime(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return this.text('just now');
+    const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+    const formatter = new Intl.RelativeTimeFormat(this.locale(), { numeric: 'auto' });
+    const ranges: [Intl.RelativeTimeFormatUnit, number][] = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
+    for (const [unit, amount] of ranges) {
+      if (Math.abs(seconds) >= amount) return formatter.format(Math.round(seconds / amount), unit);
+    }
+    return this.text('just now');
+  }
+
+  dateTime(value: string | Date): string {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return this.text('Unknown');
+    return new Intl.DateTimeFormat(this.locale(), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
+  }
+
+  normalizeLanguage(value: unknown): AppLanguage {
+    return value === 'fa' || value === 'fa-IR' || value === 'Persian' ? 'fa' : 'en';
+  }
+
+  private readInitialLanguage(): AppLanguage {
+    try {
+      const stored = localStorage.getItem(this.storageKey);
+      if (stored) return this.normalizeLanguage(stored);
+      if (navigator.language?.toLowerCase().startsWith('fa')) return 'fa';
+    } catch {
+      return 'en';
+    }
+
+    return 'en';
+  }
+
+  private writeStoredLanguage(language: AppLanguage): void {
+    try {
+      localStorage.setItem(this.storageKey, language);
+    } catch {
+      // Local storage can be unavailable in restricted browser contexts.
+    }
+  }
+}
