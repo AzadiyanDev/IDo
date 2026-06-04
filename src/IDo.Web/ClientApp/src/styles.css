@@ -3,6 +3,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/peyda/Peyda-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/peyda/Peyda-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/peyda/Peyda-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Peyda";
+  src: url("/fonts/peyda/Peyda-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-surface: #0B0E14;
   --color-surface-dim: #05070A;
@@ -60,14 +92,14 @@
   --color-status-green: #00F4B9;
   --color-status-orange: #FFC000;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-body-md: "Inter", sans-serif;
-  --font-display: "Inter", sans-serif;
-  --font-headline-lg-mobile: "Inter", sans-serif;
-  --font-headline-md: "Inter", sans-serif;
-  --font-headline-lg: "Inter", sans-serif;
-  --font-body-lg: "Inter", sans-serif;
-  --font-label-md: "Inter", sans-serif;
+  --font-sans: var(--font-app);
+  --font-body-md: var(--font-app);
+  --font-display: var(--font-app);
+  --font-headline-lg-mobile: var(--font-app);
+  --font-headline-md: var(--font-app);
+  --font-headline-lg: var(--font-app);
+  --font-body-lg: var(--font-app);
+  --font-label-md: var(--font-app);
 
   --text-body-md: 13px;
   --text-body-md--line-height: 18px;
@@ -101,9 +133,22 @@
   --breakpoint-md: 768px;
 }
 
+html {
+  --font-app: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html[lang="fa"] {
+  --font-app: "Peyda", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html[dir="rtl"] {
+  text-align: start;
+}
+
 body {
   background-color: var(--color-theme-bg);
   color: var(--color-on-surface);
+  font-family: var(--font-app);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -152,7 +197,7 @@ body {
   color: var(--color-on-surface);
   padding: 0 18px;
   outline: none;
-  font: 500 16px/20px Inter, sans-serif;
+  font: 500 16px/20px var(--font-app);
 }
 
 .date-pill,
@@ -164,7 +209,7 @@ body {
   border-radius: 999px;
   padding: 0 12px;
   outline: none;
-  font: 700 12px/14px Inter, sans-serif;
+  font: 700 12px/14px var(--font-app);
 }
 
 .choice-active {
@@ -208,7 +253,7 @@ body {
   border-radius: 999px;
   background: var(--sheet-accent);
   color: var(--color-theme-bg);
-  font: 800 15px/18px Inter, sans-serif;
+  font: 800 15px/18px var(--font-app);
   box-shadow: 0 12px 26px color-mix(in srgb, var(--sheet-accent) 28%, transparent);
 }
 
