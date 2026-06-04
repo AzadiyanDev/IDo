@@ -1,4 +1,5 @@
 using IDo.Domain.Entities;
+using IDo.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,6 +23,7 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             settings.Property(x => x.Language).HasMaxLength(12).IsRequired();
             settings.Property(x => x.Theme).HasMaxLength(32).IsRequired();
             settings.Property(x => x.WeekStartDay).HasConversion<string>().HasMaxLength(16);
+            settings.Property(x => x.CalendarType).HasConversion<string>().HasMaxLength(16).HasDefaultValue(CalendarType.Gregorian);
         });
         builder.HasIndex(x => x.Email);
         builder.HasIndex(x => x.PhoneNumber);

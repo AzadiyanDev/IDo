@@ -1112,7 +1112,7 @@ namespace IDo.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("IDo.Domain.Entities.ProjectSection", "Section")
-                        .WithMany()
+                        .WithMany("SentRequests")
                         .HasForeignKey("SectionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -1144,6 +1144,13 @@ namespace IDo.Infrastructure.Persistence.Migrations
                         {
                             b1.Property<Guid>("UserId")
                                 .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("CalendarType")
+                                .IsRequired()
+                                .ValueGeneratedOnAdd()
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasDefaultValue("Gregorian");
 
                             b1.Property<TimeOnly?>("DefaultReminderTime")
                                 .HasColumnType("time");
@@ -1268,6 +1275,8 @@ namespace IDo.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("IDo.Domain.Entities.ProjectSection", b =>
                 {
+                    b.Navigation("SentRequests");
+
                     b.Navigation("Tasks");
                 });
 

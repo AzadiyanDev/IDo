@@ -6,7 +6,7 @@ namespace IDo.Application.Common.Mappings;
 
 public static class DtoMapper
 {
-    public static UserProfileDto ToDto(this User user) => new(user.Id, user.FullName, user.AvatarUrl, user.Email, user.PhoneNumber, user.IsActive, new(user.Settings.NotificationsEnabled, user.Settings.Language, user.Settings.Theme, user.Settings.WeekStartDay, user.Settings.DefaultReminderTime));
+    public static UserProfileDto ToDto(this User user) => new(user.Id, user.FullName, user.AvatarUrl, user.Email, user.PhoneNumber, user.IsActive, new(user.Settings.NotificationsEnabled, user.Settings.Language, user.Settings.Theme, user.Settings.WeekStartDay, user.Settings.CalendarType, user.Settings.DefaultReminderTime));
     public static TaskDto ToDto(this IDoTask task)
     {
         var sentRequests = task.SentRequests ?? Enumerable.Empty<TaskRequest>();
