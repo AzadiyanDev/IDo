@@ -5,7 +5,6 @@
 </p>
 
 <p align="center" dir="rtl">
-  <strong>برای استفاده برید به این آدرس:</strong>
   <a href="https://ido.azadiyan.dev">ido.azadiyan.dev</a>
 </p>
 
