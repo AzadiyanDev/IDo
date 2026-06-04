@@ -68,17 +68,6 @@ import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal'
             </span>
           </button>
 
-          <button type="button" (click)="cycleTheme()" class="profile-row border-t border-theme-border">
-            <span class="profile-row-icon bg-tertiary-container text-on-tertiary-container">
-              <span class="material-symbols-outlined text-[19px]">contrast</span>
-            </span>
-            <span class="profile-row-text">
-              <span class="profile-row-title">{{ i18n.text('Theme') }}</span>
-              <span class="profile-row-caption">{{ i18n.text(settings().theme) }}</span>
-            </span>
-            <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
-          </button>
-
           <button type="button" (click)="cycleLanguage()" class="profile-row border-t border-theme-border">
             <span class="profile-row-icon bg-secondary-container text-on-secondary-container">
               <span class="material-symbols-outlined text-[19px]">language</span>
@@ -99,17 +88,6 @@ import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal'
               <span class="profile-row-caption">{{ calendarTypeLabel() }}</span>
             </span>
             <span class="material-symbols-outlined text-on-surface-variant">swap_horiz</span>
-          </button>
-
-          <button type="button" (click)="cycleWeekStart()" class="profile-row border-t border-theme-border">
-            <span class="profile-row-icon bg-surface-container-highest text-primary">
-              <span class="material-symbols-outlined text-[19px]">calendar_month</span>
-            </span>
-            <span class="profile-row-text">
-              <span class="profile-row-title">{{ i18n.text('Week starts on') }}</span>
-              <span class="profile-row-caption">{{ i18n.text(settings().weekStartDay) }}</span>
-            </span>
-            <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
           </button>
         </div>
       </section>
@@ -435,11 +413,6 @@ export class ProfileComponent implements OnDestroy {
     await this.saveSettings({ ...this.settings(), notificationsEnabled: !this.settings().notificationsEnabled });
   }
 
-  async cycleTheme(): Promise<void> {
-    const options = ['dark', 'light', 'system'];
-    await this.saveSettings({ ...this.settings(), theme: this.nextOption(options, this.settings().theme) });
-  }
-
   async cycleLanguage(): Promise<void> {
     const options = ['en', 'fa'];
     await this.saveSettings({ ...this.settings(), language: this.nextOption(options, this.settings().language) });
@@ -448,11 +421,6 @@ export class ProfileComponent implements OnDestroy {
   async toggleCalendarType(): Promise<void> {
     const current = this.calendar.normalizeCalendarType(this.settings().calendarType);
     await this.saveSettings({ ...this.settings(), calendarType: current === 'Jalali' ? 'Gregorian' : 'Jalali' });
-  }
-
-  async cycleWeekStart(): Promise<void> {
-    const options = ['Monday', 'Saturday', 'Sunday'];
-    await this.saveSettings({ ...this.settings(), weekStartDay: this.nextOption(options, this.settings().weekStartDay) });
   }
 
   async confirmLogout(): Promise<void> {

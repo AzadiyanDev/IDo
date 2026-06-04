@@ -125,6 +125,104 @@ type Tone = 'blue' | 'green' | 'teal' | 'orange' | 'rose' | 'purple';
           }
         </section>
 
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg overflow-hidden">
+          <div class="flex items-start justify-between gap-lg mb-lg">
+            <div class="min-w-0">
+              <div class="flex items-center gap-xs text-primary mb-xs">
+                <span class="material-symbols-outlined text-[18px]">summarize</span>
+                <span class="text-label-md font-label-md uppercase">{{ i18n.text('Executive report') }}</span>
+              </div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">{{ reportStatusTitle() }}</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1 leading-relaxed">{{ reportStatusDetail() }}</p>
+            </div>
+
+            <div class="relative w-[86px] h-[86px] shrink-0">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 42 42">
+                <circle class="fill-none stroke-theme-border" cx="21" cy="21" r="16" stroke-width="4" pathLength="100"></circle>
+                <circle class="fill-none stroke-primary transition-all duration-500" cx="21" cy="21" r="16" stroke-width="4" pathLength="100" stroke-linecap="round" [attr.stroke-dasharray]="reportScore() + ' ' + (100 - reportScore())"></circle>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-headline-md font-headline-md text-on-surface leading-none">{{ reportScore() }}</span>
+                <span class="text-[10px] leading-none text-on-surface-variant mt-1">{{ reportGrade() }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-sm">
+            @for (item of reportHighlights(); track item.label) {
+              <div class="min-h-[112px] rounded-2xl border border-theme-border bg-surface-container-lowest p-md flex flex-col justify-between gap-sm">
+                <div class="flex items-center justify-between gap-sm">
+                  <span class="text-label-md font-label-md text-on-surface-variant">{{ item.label }}</span>
+                  <span class="material-symbols-outlined text-[18px]" [ngClass]="toneTextClass(item.tone)">{{ item.icon }}</span>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-body-lg font-body-lg text-on-surface font-semibold m-0 truncate">{{ item.value }}</p>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1 leading-tight">{{ item.detail }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
+          <div class="flex items-center justify-between gap-md mb-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">{{ i18n.text('Health matrix') }}</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ i18n.text('Task, rhythm, habit, and project quality') }}</p>
+            </div>
+            <span class="text-label-md font-label-md text-primary">{{ healthSummaryLabel() }}</span>
+          </div>
+
+          <div class="flex flex-col gap-md">
+            @for (metric of healthMetrics(); track metric.key) {
+              <div>
+                <div class="flex items-center justify-between gap-md mb-xs">
+                  <div class="flex items-center gap-sm min-w-0">
+                    <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" [ngClass]="toneSurfaceClass(metric.tone)">
+                      <span class="material-symbols-outlined text-[19px]" [ngClass]="toneTextClass(metric.tone)">{{ metric.icon }}</span>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-body-md font-body-md text-on-surface font-semibold m-0 truncate">{{ metric.label }}</p>
+                      <p class="text-label-md font-label-md text-on-surface-variant m-0 truncate">{{ metric.detail }}</p>
+                    </div>
+                  </div>
+                  <span class="text-label-md font-label-md shrink-0" [ngClass]="toneTextClass(metric.tone)">{{ metric.score }}%</span>
+                </div>
+                <div class="h-2 bg-surface-container-high rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-500" [style.width.%]="metric.score" [style.background]="toneColor(metric.tone)"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
+          <div class="flex items-center justify-between gap-md mb-md">
+            <div>
+              <h3 class="text-headline-md font-headline-md text-on-surface m-0">{{ i18n.text('Action plan') }}</h3>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">{{ i18n.text('Highest-impact next moves') }}</p>
+            </div>
+            <span class="material-symbols-outlined text-primary">route</span>
+          </div>
+
+          <div class="flex flex-col gap-sm">
+            @for (action of actionPlan(); track action.label; let index = $index) {
+              <div class="border border-theme-border rounded-2xl p-md flex items-start gap-md">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" [ngClass]="toneSurfaceClass(action.tone)">
+                  <span class="material-symbols-outlined text-[19px]" [ngClass]="toneTextClass(action.tone)">{{ action.icon }}</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-md">
+                    <h4 class="text-body-lg font-body-lg text-on-surface m-0">{{ index + 1 }}. {{ action.label }}</h4>
+                    <span class="text-label-md font-label-md shrink-0" [ngClass]="toneTextClass(action.tone)">{{ action.impact }}</span>
+                  </div>
+                  <p class="text-label-md font-label-md text-on-surface-variant m-0 mt-1 leading-relaxed">{{ action.detail }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+
         <section class="bg-theme-surface border border-theme-border rounded-2xl p-lg">
           <div class="flex items-center justify-between gap-md mb-md">
             <div>
@@ -391,6 +489,25 @@ export class ProgressComponent {
   readonly portfolioDone = computed(() => this.projectProgress().reduce((sum, item) => sum + item.doneCount, 0));
   readonly portfolioTotal = computed(() => this.projectProgress().reduce((sum, item) => sum + item.totalCount, 0));
   readonly averageProjectProgress = computed(() => this.average(this.projectProgress().filter(item => item.totalCount > 0).map(item => item.percentage)));
+  readonly reportScore = computed(() => {
+    const baseScore = Math.round(
+      this.todayCompletion() * 0.3 +
+      this.todayTaskCompletion() * 0.2 +
+      this.weekConsistency() * 0.2 +
+      this.averageHabitRate() * 0.15 +
+      this.averageProjectProgress() * 0.15
+    );
+    const overduePenalty = Math.min(20, this.overdueTasks().length * 5);
+    const pendingPenalty = Math.min(8, (this.summary()?.pendingRequestCount ?? 0) * 2);
+    return this.clampPercent(baseScore - overduePenalty - pendingPenalty);
+  });
+  readonly reportGrade = computed(() => {
+    if (this.reportScore() >= 90) return 'A+';
+    if (this.reportScore() >= 80) return 'A';
+    if (this.reportScore() >= 70) return 'B';
+    if (this.reportScore() >= 55) return 'C';
+    return 'D';
+  });
 
   readonly categoryMetrics = computed<CategoryMetric[]>(() => {
     const summary = this.summary();
@@ -452,6 +569,175 @@ export class ProgressComponent {
     if (recent > previous) return { label: this.i18n.text('Improving'), icon: 'trending_up', toneClass: 'text-theme-green' };
     if (recent < previous) return { label: this.i18n.text('Cooling'), icon: 'trending_down', toneClass: 'text-theme-orange' };
     return { label: this.i18n.text('Stable'), icon: 'trending_flat', toneClass: 'text-primary' };
+  });
+
+  readonly healthMetrics = computed<HealthMetric[]>(() => [
+    {
+      key: 'today',
+      label: this.i18n.text('Daily execution'),
+      detail: this.i18n.language() === 'fa'
+        ? `${this.i18n.number(this.completedToday())}/${this.i18n.number(this.totalToday())} آیتم برنامه امروز تکمیل شده`
+        : `${this.completedToday()}/${this.totalToday()} items in today's plan are done`,
+      score: this.todayCompletion(),
+      icon: 'task_alt',
+      tone: this.toneForScore(this.todayCompletion())
+    },
+    {
+      key: 'weekly',
+      label: this.i18n.text('Weekly rhythm'),
+      detail: this.i18n.language() === 'fa'
+        ? `${this.i18n.number(this.weekConsistency())}% ثبات در روزهای سپری‌شده`
+        : `${this.weekConsistency()}% consistency across elapsed days`,
+      score: this.weekConsistency(),
+      icon: 'timeline',
+      tone: this.toneForScore(this.weekConsistency())
+    },
+    {
+      key: 'habits',
+      label: this.i18n.text('Habit reliability'),
+      detail: this.i18n.language() === 'fa'
+        ? `${this.i18n.number(this.habitProgress().length)} عادت، میانگین ${this.i18n.number(this.averageHabitRate())}%`
+        : `${this.habitProgress().length} habits, ${this.averageHabitRate()}% average`,
+      score: this.averageHabitRate(),
+      icon: 'repeat',
+      tone: this.toneForScore(this.averageHabitRate())
+    },
+    {
+      key: 'projects',
+      label: this.i18n.text('Project delivery'),
+      detail: this.i18n.language() === 'fa'
+        ? `${this.i18n.number(this.portfolioDone())}/${this.i18n.number(this.portfolioTotal())} تسک پروژه تحویل شده`
+        : `${this.portfolioDone()}/${this.portfolioTotal()} project tasks delivered`,
+      score: this.averageProjectProgress(),
+      icon: 'account_tree',
+      tone: this.toneForScore(this.averageProjectProgress())
+    }
+  ]);
+
+  readonly strongestMetric = computed(() => this.healthMetrics().reduce((best, metric) => metric.score > best.score ? metric : best, this.healthMetrics()[0]));
+  readonly weakestMetric = computed(() => this.healthMetrics().reduce((weakest, metric) => metric.score < weakest.score ? metric : weakest, this.healthMetrics()[0]));
+
+  readonly reportHighlights = computed<ReportHighlight[]>(() => [
+    {
+      label: this.i18n.text('Strongest signal'),
+      value: this.strongestMetric().label,
+      detail: this.i18n.language() === 'fa'
+        ? `${this.i18n.number(this.strongestMetric().score)}% آماده و قابل اتکا`
+        : `${this.strongestMetric().score}% is the most reliable area`,
+      icon: 'verified',
+      tone: 'green'
+    },
+    {
+      label: this.i18n.text('Main bottleneck'),
+      value: this.weakestMetric().label,
+      detail: this.i18n.language() === 'fa'
+        ? `${this.i18n.number(this.weakestMetric().score)}%؛ بیشترین اثر اصلاح اینجاست`
+        : `${this.weakestMetric().score}%; this is the highest-leverage fix`,
+      icon: 'report',
+      tone: this.weakestMetric().score >= 70 ? 'orange' : 'rose'
+    },
+    {
+      label: this.i18n.text('Work pressure'),
+      value: this.remainingLoadLabel(),
+      detail: this.remainingLoadDetail(),
+      icon: 'speed',
+      tone: this.leftToday() === 0 ? 'green' : this.leftToday() <= 2 ? 'orange' : 'rose'
+    },
+    {
+      label: this.i18n.text('Forecast'),
+      value: this.completionForecastLabel(),
+      detail: this.completionForecastDetail(),
+      icon: 'insights',
+      tone: this.todayCompletion() >= 80 ? 'green' : this.todayCompletion() >= 50 ? 'orange' : 'blue'
+    }
+  ]);
+
+  readonly actionPlan = computed<ActionItem[]>(() => {
+    const actions: ActionItem[] = [];
+
+    if (this.overdueTasks().length > 0) {
+      actions.push({
+        label: this.i18n.text('Recover overdue work'),
+        detail: this.i18n.language() === 'fa'
+          ? `${this.i18n.number(this.overdueTasks().length)} مورد عقب‌افتاده ریسک اصلی امروز است؛ از قدیمی‌ترین مورد شروع کن.`
+          : `${this.overdueTasks().length} overdue item${this.overdueTasks().length === 1 ? '' : 's'} are today's main risk; start with the oldest one.`,
+        impact: this.i18n.text('High'),
+        icon: 'priority_high',
+        tone: 'rose'
+      });
+    }
+
+    if (this.leftToday() > 0) {
+      actions.push({
+        label: this.i18n.text('Close the current plan'),
+        detail: this.i18n.language() === 'fa'
+          ? `${this.i18n.number(this.leftToday())} آیتم باقی مانده؛ تا قبل از افزودن کار جدید دامنه امروز را جمع کن.`
+          : `${this.leftToday()} item${this.leftToday() === 1 ? '' : 's'} remain; close today's scope before adding new work.`,
+        impact: this.leftToday() > 2 ? this.i18n.text('High') : this.i18n.text('Medium'),
+        icon: 'checklist',
+        tone: this.leftToday() > 2 ? 'orange' : 'teal'
+      });
+    }
+
+    if (this.weekConsistency() < 60 && this.daysElapsedInWeek() > 1) {
+      actions.push({
+        label: this.i18n.text('Repair weekly rhythm'),
+        detail: this.i18n.language() === 'fa'
+          ? `ثبات هفته ${this.i18n.number(this.weekConsistency())}% است؛ یک تکمیل کوچک امروز ریتم را سریع‌تر ترمیم می‌کند.`
+          : `Weekly consistency is ${this.weekConsistency()}%; one small completion today repairs the rhythm fastest.`,
+        impact: this.i18n.text('Medium'),
+        icon: 'calendar_view_week',
+        tone: 'blue'
+      });
+    }
+
+    if (this.averageHabitRate() < 65 && this.habitProgress().length > 0) {
+      actions.push({
+        label: this.i18n.text('Stabilize habits'),
+        detail: this.i18n.language() === 'fa'
+          ? `میانگین موفقیت عادت‌ها ${this.i18n.number(this.averageHabitRate())}% است؛ ضعیف‌ترین عادت را قبل از اضافه کردن روتین جدید تثبیت کن.`
+          : `Habit success averages ${this.averageHabitRate()}%; stabilize the weakest routine before adding another one.`,
+        impact: this.i18n.text('Medium'),
+        icon: 'repeat',
+        tone: 'green'
+      });
+    }
+
+    if (this.averageProjectProgress() < 50 && this.projectProgress().some(item => item.totalCount > 0)) {
+      actions.push({
+        label: this.i18n.text('Unblock project delivery'),
+        detail: this.i18n.language() === 'fa'
+          ? `میانگین پیشرفت پروژه‌ها ${this.i18n.number(this.averageProjectProgress())}% است؛ پروژه کم‌پیشرفت‌تر را به یک تسک قابل تحویل بشکن.`
+          : `Project progress averages ${this.averageProjectProgress()}%; split the slowest project into one deliverable task.`,
+        impact: this.i18n.text('Medium'),
+        icon: 'account_tree',
+        tone: 'purple'
+      });
+    }
+
+    if ((this.summary()?.pendingRequestCount ?? 0) > 0) {
+      actions.push({
+        label: this.i18n.text('Clear pending requests'),
+        detail: this.i18n.language() === 'fa'
+          ? `${this.i18n.number(this.summary()?.pendingRequestCount ?? 0)} درخواست در inbox منتظر تصمیم است.`
+          : `${this.summary()?.pendingRequestCount ?? 0} inbox request${(this.summary()?.pendingRequestCount ?? 0) === 1 ? '' : 's'} need a decision.`,
+        impact: this.i18n.text('Low'),
+        icon: 'inbox',
+        tone: 'teal'
+      });
+    }
+
+    if (actions.length === 0) {
+      actions.push({
+        label: this.i18n.text('Protect the current momentum'),
+        detail: this.i18n.text('The report has no urgent risk. Keep the scope narrow and finish with a clean review.'),
+        impact: this.i18n.text('Low'),
+        icon: 'shield',
+        tone: 'green'
+      });
+    }
+
+    return actions.slice(0, 4);
   });
 
   readonly focusScore = computed(() => {
@@ -664,6 +950,70 @@ export class ProgressComponent {
       : `${this.shortDateLabel(this.today)} - analytics and delivery flow`;
   }
 
+  reportStatusTitle(): string {
+    if (this.reportScore() >= 85) return this.i18n.text('Execution is strong');
+    if (this.reportScore() >= 70) return this.i18n.text('Execution is controlled');
+    if (this.reportScore() >= 55) return this.i18n.text('Execution needs focus');
+    return this.i18n.text('Execution is at risk');
+  }
+
+  reportStatusDetail(): string {
+    if (this.reportScore() >= 85) {
+      return this.i18n.text('The current plan is healthy. Keep the day narrow and finish with review quality.');
+    }
+
+    if (this.overdueTasks().length > 0) {
+      return this.i18n.language() === 'fa'
+        ? `امتیاز کلی با ${this.i18n.number(this.overdueTasks().length)} مورد عقب‌افتاده پایین آمده؛ بازیابی قبل از توسعه دامنه اولویت دارد.`
+        : `The overall score is pulled down by ${this.overdueTasks().length} overdue item${this.overdueTasks().length === 1 ? '' : 's'}; recover before expanding scope.`;
+    }
+
+    if (this.weakestMetric().score < 60) {
+      return this.i18n.language() === 'fa'
+        ? `${this.weakestMetric().label} ضعیف‌ترین بخش گزارش است و باید اولین نقطه اصلاح باشد.`
+        : `${this.weakestMetric().label} is the weakest area in the report and should be fixed first.`;
+    }
+
+    return this.i18n.text('The report is balanced, but one focused completion will improve the score meaningfully.');
+  }
+
+  healthSummaryLabel(): string {
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.reportScore())}% امتیاز کل`
+      : `${this.reportScore()}% total score`;
+  }
+
+  remainingLoadLabel(): string {
+    if (this.leftToday() === 0) return this.i18n.text('Clear');
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.leftToday())} مانده`
+      : `${this.leftToday()} left`;
+  }
+
+  remainingLoadDetail(): string {
+    if (this.leftToday() === 0) return this.i18n.text("No active load remains in today's plan.");
+    const category = this.categoryMetrics().reduce((largest, item) => item.total > largest.total ? item : largest, this.categoryMetrics()[0]);
+    return this.i18n.language() === 'fa'
+      ? `بیشترین فشار امروز از ${category.label} می‌آید.`
+      : `${category.label} carries the largest share of today's load.`;
+  }
+
+  completionForecastLabel(): string {
+    if (this.totalToday() === 0) return this.i18n.text('No load');
+    if (this.todayCompletion() >= 90) return this.i18n.text('Finish likely');
+    if (this.todayCompletion() >= 60) return this.i18n.text('Recoverable');
+    return this.i18n.text('Needs intervention');
+  }
+
+  completionForecastDetail(): string {
+    if (this.totalToday() === 0) return this.i18n.text('There is no scheduled scope to forecast today.');
+    const needed = Math.max(0, Math.ceil(this.totalToday() * 0.8) - this.completedToday());
+    if (needed === 0) return this.i18n.text('The day is already above the 80% finish target.');
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(needed)} تکمیل دیگر، روز را به محدوده ۸۰٪ می‌رساند.`
+      : `${needed} more completion${needed === 1 ? '' : 's'} move the day into the 80% finish zone.`;
+  }
+
   primaryInsight(): string {
     if (this.overdueTasks().length > 0) {
       return this.i18n.language() === 'fa'
@@ -797,6 +1147,23 @@ export class ProgressComponent {
     }
   }
 
+  toneColor(tone: Tone): string {
+    switch (tone) {
+      case 'blue':
+        return '#3EAEFF';
+      case 'green':
+        return '#00F4B9';
+      case 'teal':
+        return '#00E6F6';
+      case 'orange':
+        return '#FFC000';
+      case 'rose':
+        return '#FF3366';
+      case 'purple':
+        return '#B072FF';
+    }
+  }
+
   private categoryMetric(key: string, label: string, icon: string, done: number, total: number, color: string, surface: string): CategoryMetric {
     return {
       key,
@@ -813,6 +1180,13 @@ export class ProgressComponent {
   private average(values: number[]): number {
     if (values.length === 0) return 0;
     return this.clampPercent(Math.round(values.reduce((sum, value) => sum + value, 0) / values.length));
+  }
+
+  private toneForScore(score: number): Tone {
+    if (score >= 80) return 'green';
+    if (score >= 60) return 'teal';
+    if (score >= 40) return 'orange';
+    return 'rose';
   }
 
   private habitStatus(successRate: number): string {
@@ -913,6 +1287,31 @@ interface ProcessStep {
   label: string;
   value: string;
   detail: string;
+  icon: string;
+  tone: Tone;
+}
+
+interface ReportHighlight {
+  label: string;
+  value: string;
+  detail: string;
+  icon: string;
+  tone: Tone;
+}
+
+interface HealthMetric {
+  key: string;
+  label: string;
+  detail: string;
+  score: number;
+  icon: string;
+  tone: Tone;
+}
+
+interface ActionItem {
+  label: string;
+  detail: string;
+  impact: string;
   icon: string;
   tone: Tone;
 }
