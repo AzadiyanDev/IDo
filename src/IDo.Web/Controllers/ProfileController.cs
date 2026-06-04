@@ -73,6 +73,7 @@ public sealed class ProfileController(
         user.Settings.Language = request.Settings.Language;
         user.Settings.Theme = request.Settings.Theme;
         user.Settings.WeekStartDay = request.Settings.WeekStartDay;
+        user.Settings.CalendarType = request.Settings.CalendarType;
         user.Settings.DefaultReminderTime = request.Settings.DefaultReminderTime;
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -120,6 +121,7 @@ public sealed class ProfileController(
         user.Settings.Language = request.Language;
         user.Settings.Theme = request.Theme;
         user.Settings.WeekStartDay = request.WeekStartDay;
+        user.Settings.CalendarType = request.CalendarType;
         user.Settings.DefaultReminderTime = request.DefaultReminderTime;
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return Ok(user.ToDto());
