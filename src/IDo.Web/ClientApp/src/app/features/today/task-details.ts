@@ -1,8 +1,10 @@
-import { Location } from '@angular/common';
+﻿import { Location } from '@angular/common';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import * as signalR from '@microsoft/signalr';
 import { AuthService } from '../../core/auth.service';
+import { CalendarService } from '../../core/calendar.service';
+import { I18nService } from '../../core/i18n.service';
 import { TaskDto, TaskStatus } from '../../core/today.service';
 import { TaskCommentDto, TaskDetailsDto, TasksService } from '../../core/tasks.service';
 
@@ -17,7 +19,7 @@ type HoldAction = 'next' | 'previous';
         <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">arrow_back</span>
       </button>
       <div class="flex flex-col items-center min-w-0 px-sm">
-        <h1 class="font-headline-md text-headline-md text-on-surface m-0 leading-tight">Task Details</h1>
+        <h1 class="font-headline-md text-headline-md text-on-surface m-0 leading-tight">{{ i18n.text('Task Details') }}</h1>
         <span class="font-label-md text-label-md text-on-surface-variant truncate max-w-[220px]">{{ projectPathLabel() }}</span>
       </div>
       <button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors active:scale-95 border-none bg-transparent">
@@ -35,7 +37,7 @@ type HoldAction = 'next' | 'previous';
       <div class="px-margin-mobile py-xl">
         <section class="bg-theme-surface border border-theme-border rounded-[24px] p-lg text-center">
           <span class="material-symbols-outlined text-error text-[32px]">error</span>
-          <h2 class="font-headline-md text-on-surface mt-sm mb-xs">Task unavailable</h2>
+          <h2 class="font-headline-md text-on-surface mt-sm mb-xs">{{ i18n.text('Task unavailable') }}</h2>
           <p class="font-body-md text-on-surface-variant m-0">{{ loadError() }}</p>
         </section>
       </div>
@@ -61,7 +63,7 @@ type HoldAction = 'next' | 'previous';
           <div class="flex flex-col gap-xs">
             <h2 class="font-headline-lg-mobile text-on-surface m-0">{{ task().title }}</h2>
             <p class="font-body-md text-on-surface-variant leading-relaxed m-0">
-              {{ task().description || 'No description provided.' }}
+              {{ task().description || i18n.text('No description provided.') }}
             </p>
           </div>
 
@@ -82,7 +84,7 @@ type HoldAction = 'next' | 'previous';
         </section>
 
         <section class="flex flex-col gap-sm">
-          <h3 class="section-label">Status</h3>
+          <h3 class="section-label">{{ i18n.text('Status') }}</h3>
           <div class="relative flex bg-surface-container-lowest p-base rounded-full border border-theme-border overflow-hidden">
             <div
               class="status-pill"
@@ -104,11 +106,11 @@ type HoldAction = 'next' | 'previous';
         </section>
 
         <section class="bg-theme-surface border border-theme-border rounded-[24px] p-md flex flex-col gap-sm">
-          <h3 class="section-label pl-0">Information</h3>
+          <h3 class="section-label pl-0">{{ i18n.text('Information') }}</h3>
           <div class="detail-row">
             <div class="detail-title">
               <span class="material-symbols-outlined">event</span>
-              <span>Deadline</span>
+              <span>{{ i18n.text('Deadline') }}</span>
             </div>
             <span class="detail-value">{{ dueLabel() }}</span>
           </div>
@@ -116,7 +118,7 @@ type HoldAction = 'next' | 'previous';
           <div class="detail-row">
             <div class="detail-title">
               <span class="material-symbols-outlined">schedule</span>
-              <span>Created</span>
+              <span>{{ i18n.text('Created') }}</span>
             </div>
             <span class="detail-value">{{ dateTimeLabel(task().createdAtUtc) }}</span>
           </div>
@@ -125,7 +127,7 @@ type HoldAction = 'next' | 'previous';
             <div class="detail-row">
               <div class="detail-title">
                 <span class="material-symbols-outlined">task_alt</span>
-                <span>Completed</span>
+                <span>{{ i18n.text('Completed') }}</span>
               </div>
               <span class="detail-value">{{ dateTimeLabel(task().completedAtUtc) }}</span>
             </div>
@@ -135,7 +137,7 @@ type HoldAction = 'next' | 'previous';
             <div class="detail-row">
               <div class="detail-title">
                 <span class="material-symbols-outlined">folder</span>
-                <span>Project</span>
+                <span>{{ i18n.text('Project') }}</span>
               </div>
               <span class="detail-value">{{ detail.projectTitle }}</span>
             </div>
@@ -145,7 +147,7 @@ type HoldAction = 'next' | 'previous';
             <div class="detail-row">
               <div class="detail-title">
                 <span class="material-symbols-outlined">view_column</span>
-                <span>Section</span>
+                <span>{{ i18n.text('Section') }}</span>
               </div>
               <span class="detail-value">{{ detail.sectionTitle }}</span>
             </div>
@@ -154,7 +156,7 @@ type HoldAction = 'next' | 'previous';
 
         @if (commentsEnabled()) {
           <section class="flex flex-col gap-md pb-lg">
-            <h3 class="section-label">{{ comments().length }} Comment{{ comments().length === 1 ? '' : 's' }}</h3>
+            <h3 class="section-label">{{ commentsTitle() }}</h3>
             <div class="flex flex-col gap-lg">
               @for (comment of comments(); track comment.id) {
                 <div
@@ -171,7 +173,7 @@ type HoldAction = 'next' | 'previous';
                   </div>
                   <div class="comment-content" [class.items-end]="isCreatorComment(comment)">
                     <div class="comment-meta" [class.flex-row-reverse]="isCreatorComment(comment)">
-                      <span class="font-label-md text-on-surface font-semibold">{{ isCreatorComment(comment) ? 'Creator' : comment.userDisplayName }}</span>
+                      <span class="font-label-md text-on-surface font-semibold">{{ isCreatorComment(comment) ? i18n.text('Creator') : comment.userDisplayName }}</span>
                       <span class="font-label-md text-on-surface-variant text-[10px]">{{ relativeTime(comment.createdAtUtc) }}</span>
                     </div>
                     <div class="comment-bubble" [class.comment-bubble-creator]="isCreatorComment(comment)">
@@ -181,7 +183,7 @@ type HoldAction = 'next' | 'previous';
                 </div>
               } @empty {
                 <div class="bg-theme-surface border border-theme-border rounded-2xl p-lg text-center text-on-surface-variant">
-                  No comments yet.
+                  {{ i18n.text('No comments yet.') }}
                 </div>
               }
             </div>
@@ -197,14 +199,14 @@ type HoldAction = 'next' | 'previous';
               <div class="flex-1 relative">
                 <input
                   type="text"
-                  placeholder="Add a comment..."
+                  [placeholder]="i18n.text('Add a comment...')"
                   [value]="commentDraft()"
                   (input)="commentDraft.set($any($event.target).value)"
-                  class="w-full bg-surface-container-lowest border border-theme-border rounded-full py-sm pl-md pr-[48px] font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-theme-blue/50 focus:ring-1 focus:ring-theme-blue/50 transition-all"/>
+                  class="w-full bg-surface-container-lowest border border-theme-border rounded-full py-sm ps-md pe-[48px] font-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-theme-blue/50 focus:ring-1 focus:ring-theme-blue/50 transition-all"/>
                 <button
                   type="submit"
                   [disabled]="isPostingComment() || !commentDraft().trim()"
-                  class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-theme-blue hover:bg-theme-blue/10 transition-colors border-none bg-transparent outline-none disabled:opacity-40">
+                  class="absolute end-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-theme-blue hover:bg-theme-blue/10 transition-colors border-none bg-transparent outline-none disabled:opacity-40">
                   <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">send</span>
                 </button>
               </div>
@@ -242,7 +244,7 @@ type HoldAction = 'next' | 'previous';
             class="hold-button hold-previous"
             [class.hold-active]="activeHoldAction() === 'previous'"
             [class.hold-suppressed]="activeHoldAction() === 'next'"
-            aria-label="Hold to go back one status">
+            [attr.aria-label]="i18n.text('Hold to go back one status')">
             @if (previousStatus()) {
               <div
                 class="hold-fill hold-fill-reverse"
@@ -259,30 +261,30 @@ type HoldAction = 'next' | 'previous';
   `,
   styles: [`
     :host { display: block; min-height: 100%; }
-    .section-label { margin: 0; padding-left: 0.25rem; font: 600 11px/14px Inter, sans-serif; color: var(--color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.05em; }
-    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font: 600 11px/14px Inter, sans-serif; transition: background-color 260ms ease, color 260ms ease, border-color 260ms ease, transform 260ms ease; }
+    .section-label { margin: 0; padding-left: 0.25rem; font: 600 11px/14px var(--font-app); color: var(--color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.05em; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font: 600 11px/14px var(--font-app); transition: background-color 260ms ease, color 260ms ease, border-color 260ms ease, transform 260ms ease; }
     .status-todo { background: rgba(142, 155, 174, 0.12); color: var(--color-on-surface-variant); border: 1px solid rgba(142, 155, 174, 0.18); }
     .status-progress { background: rgba(62, 174, 255, 0.12); color: var(--color-theme-blue); border: 1px solid rgba(62, 174, 255, 0.2); }
     .status-done { background: rgba(0, 244, 185, 0.12); color: var(--color-theme-green); border: 1px solid rgba(0, 244, 185, 0.2); }
     .status-pulse { animation: statusPulse 420ms ease; }
-    .info-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--color-surface-container-lowest); border: 1px solid var(--color-theme-border); color: var(--color-on-surface); font: 500 11px/14px Inter, sans-serif; }
+    .info-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--color-surface-container-lowest); border: 1px solid var(--color-theme-border); color: var(--color-on-surface); font: 500 11px/14px var(--font-app); }
     .status-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; border-radius: 999px; box-shadow: 0 8px 18px rgba(0,0,0,0.22); transition: transform 420ms cubic-bezier(.2,.8,.2,1), background-color 320ms ease; }
     .status-pill-todo { background: var(--color-on-surface-variant); }
     .status-pill-progress { background: var(--color-theme-blue); }
     .status-pill-done { background: var(--color-theme-green); }
     .detail-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 6px 0; }
-    .detail-title { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--color-on-surface-variant); font: 500 13px/18px Inter, sans-serif; }
+    .detail-title { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--color-on-surface-variant); font: 500 13px/18px var(--font-app); }
     .detail-title .material-symbols-outlined { font-size: 20px; }
-    .detail-value { color: var(--color-on-surface); font: 500 13px/18px Inter, sans-serif; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+    .detail-value { color: var(--color-on-surface); font: 500 13px/18px var(--font-app); text-align: right; min-width: 0; overflow-wrap: anywhere; }
     .divider { height: 1px; width: 100%; background: rgba(42, 51, 65, 0.65); }
     .comment-row { display: flex; gap: 10px; align-items: flex-start; }
     .comment-creator { flex-direction: row-reverse; }
     .comment-content { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
     .comment-meta { display: flex; align-items: baseline; gap: 6px; }
-    .comment-bubble { width: fit-content; max-width: min(78vw, 420px); padding: 10px 12px; border-radius: 4px 16px 16px 16px; border: 1px solid var(--color-theme-border); background: var(--color-theme-surface); color: var(--color-on-surface); font: 400 13px/18px Inter, sans-serif; overflow-wrap: anywhere; }
+    .comment-bubble { width: fit-content; max-width: min(78vw, 420px); padding: 10px 12px; border-radius: 4px 16px 16px 16px; border: 1px solid var(--color-theme-border); background: var(--color-theme-surface); color: var(--color-on-surface); font: 400 13px/18px var(--font-app); overflow-wrap: anywhere; }
     .comment-bubble-creator { border-radius: 16px 4px 16px 16px; border-color: rgba(62, 174, 255, 0.24); background: rgba(62, 174, 255, 0.16); color: var(--color-on-primary-container); }
     .comment-enter { animation: commentEnter 360ms ease both; }
-    .avatar { width: 40px; height: 40px; border-radius: 999px; overflow: hidden; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font: 700 12px/1 Inter, sans-serif; }
+    .avatar { width: 40px; height: 40px; border-radius: 999px; overflow: hidden; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font: 700 12px/1 var(--font-app); }
     .avatar-creator { border-color: rgba(62, 174, 255, 0.32); }
     .hold-actions { display: flex; gap: 10px; align-items: center; justify-content: center; }
     .hold-button { height: 64px; border-radius: 999px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; user-select: none; outline: none; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); color: var(--color-on-surface); transition: flex-basis 220ms ease, flex-grow 220ms ease, transform 180ms ease, border-color 240ms ease, background-color 240ms ease, opacity 180ms ease, padding 180ms ease; }
@@ -307,6 +309,8 @@ export class TaskDetailsComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly tasksService = inject(TasksService);
   private readonly auth = inject(AuthService);
+  private readonly calendar = inject(CalendarService);
+  readonly i18n = inject(I18nService);
   readonly location = inject(Location);
 
   private readonly taskId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -399,8 +403,7 @@ export class TaskDetailsComponent implements OnDestroy {
 
   statusLabel(status: TaskStatus | VisibleStatus | number): string {
     const name = this.taskStatusName(status);
-    if (name === 'InProgress') return 'In Progress';
-    return name;
+    return this.i18n.text(name === 'InProgress' ? 'In Progress' : name);
   }
 
   statusIcon(): string {
@@ -417,16 +420,16 @@ export class TaskDetailsComponent implements OnDestroy {
 
   actionLabel(): string {
     const next = this.nextStatus();
-    if (!next) return this.taskStatusName(this.task().status) === 'Archived' ? 'Task Archived' : 'Task Completed';
-    if (next === 'InProgress') return 'Hold 2s to start';
-    if (next === 'Review') return 'Hold 2s for review';
-    return 'Hold 2s to mark done';
+    if (!next) return this.taskStatusName(this.task().status) === 'Archived' ? this.i18n.text('Task Archived') : this.i18n.text('Task Completed');
+    if (next === 'InProgress') return this.i18n.text('Hold 2s to start');
+    if (next === 'Review') return this.i18n.text('Hold 2s for review');
+    return this.i18n.text('Hold 2s to mark done');
   }
 
   previousActionLabel(): string {
     const previous = this.previousStatus();
-    if (!previous) return 'Back';
-    return `Back to ${this.statusLabel(previous)}`;
+    if (!previous) return this.i18n.text('Back');
+    return this.i18n.language() === 'fa' ? `برگشت به ${this.statusLabel(previous)}` : `Back to ${this.statusLabel(previous)}`;
   }
 
   holdFillColor(action: HoldAction): string {
@@ -436,45 +439,44 @@ export class TaskDetailsComponent implements OnDestroy {
 
   projectPathLabel(): string {
     const detail = this.details();
-    if (!detail) return 'Loading';
+    if (!detail) return this.i18n.text('Loading');
     if (detail.projectTitle && detail.sectionTitle) return `${detail.projectTitle} / ${detail.sectionTitle}`;
-    return detail.projectTitle || (this.isProjectTask() ? 'Project task' : 'Personal todo');
+    return detail.projectTitle || (this.isProjectTask() ? this.i18n.text('Project task') : this.i18n.text('Personal todo'));
   }
 
   ownershipLabel(): string {
     const userId = this.currentUser()?.userId;
-    if (this.task().creatorUserId === userId) return 'Created by you';
-    if (this.task().assigneeUserId === userId) return 'Assigned to you';
-    return this.isProjectTask() ? 'Project member' : 'Personal';
+    if (this.task().creatorUserId === userId) return this.i18n.text('Created by you');
+    if (this.task().assigneeUserId === userId) return this.i18n.text('Assigned to you');
+    return this.isProjectTask() ? this.i18n.text('Project member') : this.i18n.text('Personal');
   }
 
   dueLabel(): string {
     const task = this.task();
-    if (!task.dueDate && !task.dueTime) return 'No deadline';
-    const date = task.dueDate ? this.dateOnlyLabel(task.dueDate) : 'No date';
+    if (!task.dueDate && !task.dueTime) return this.i18n.text('No deadline');
+    const date = task.dueDate ? this.dateOnlyLabel(task.dueDate) : this.i18n.text('No date');
     return task.dueTime ? `${date}, ${task.dueTime.slice(0, 5)}` : date;
   }
 
   reminderLabel(): string {
-    return this.task().reminderAtUtc ? this.dateTimeLabel(this.task().reminderAtUtc) : 'No reminder';
+    return this.task().reminderAtUtc ? this.dateTimeLabel(this.task().reminderAtUtc) : this.i18n.text('No reminder');
   }
 
   dateTimeLabel(value: string | null | undefined): string {
-    if (!value) return 'Unknown';
+    if (!value) return this.i18n.text('Unknown');
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Unknown';
-    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date);
+    if (Number.isNaN(date.getTime())) return this.i18n.text('Unknown');
+    return this.calendar.formatDateTime(date);
   }
 
   relativeTime(value: string): string {
-    const date = new Date(value);
-    const seconds = Math.round((date.getTime() - Date.now()) / 1000);
-    const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-    const ranges: [Intl.RelativeTimeFormatUnit, number][] = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
-    for (const [unit, amount] of ranges) {
-      if (Math.abs(seconds) >= amount) return formatter.format(Math.round(seconds / amount), unit);
-    }
-    return 'just now';
+    return this.i18n.relativeTime(value);
+  }
+
+  commentsTitle(): string {
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.comments().length)} نظر`
+      : `${this.comments().length} Comment${this.comments().length === 1 ? '' : 's'}`;
   }
 
   initials(name: string): string {
@@ -488,7 +490,7 @@ export class TaskDetailsComponent implements OnDestroy {
 
   private async loadTask(): Promise<void> {
     if (!this.taskId) {
-      this.loadError.set('Task id is missing.');
+      this.loadError.set(this.i18n.text('Task id is missing.'));
       this.isLoading.set(false);
       return;
     }
@@ -496,7 +498,7 @@ export class TaskDetailsComponent implements OnDestroy {
       this.details.set(await this.tasksService.getTaskDetails(this.taskId));
       await this.setupRealtime();
     } catch {
-      this.loadError.set('The task could not be loaded.');
+      this.loadError.set(this.i18n.text('The task could not be loaded.'));
     } finally {
       this.isLoading.set(false);
     }
@@ -595,6 +597,6 @@ export class TaskDetailsComponent implements OnDestroy {
   private dateOnlyLabel(value: string): string {
     const date = new Date(`${value}T00:00:00`);
     if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+    return this.calendar.formatLongDate(date);
   }
 }
