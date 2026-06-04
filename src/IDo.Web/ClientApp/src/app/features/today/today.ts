@@ -1,5 +1,5 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { TaskDto, TodayDashboardDto, TodayHabitDto, TodayProjectDto, TodayService } from '../../core/today.service';
 import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
@@ -10,7 +10,7 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
   template: `
     <header class="w-full top-0 sticky bg-theme-bg z-40 py-md">
       <div class="flex justify-between items-center px-margin-mobile w-full">
-        <div class="flex items-center gap-md min-w-0">
+        <a routerLink="/profile" class="flex items-center gap-md min-w-0 no-underline text-inherit rounded-2xl -my-md py-md pr-sm hover:bg-theme-surface transition-colors">
           <div class="w-10 h-10 rounded-full overflow-hidden border border-theme-border flex-shrink-0 bg-theme-surface flex items-center justify-center">
             @if (avatarUrl()) {
               <img [src]="avatarUrl()" [alt]="displayName()" class="w-full h-full object-cover"/>
@@ -22,14 +22,44 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
             <h1 class="text-headline-lg-mobile font-headline-lg-mobile text-primary leading-tight truncate">{{ displayName() }}</h1>
             <p class="text-body-md font-body-md text-on-surface-variant leading-tight">Your plan for today is ready</p>
           </div>
-        </div>
-        <button class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 transition-opacity flex-shrink-0 relative">
+        </a>
+        <button type="button" (click)="toggleNotifications()" class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 transition-opacity flex-shrink-0 relative">
           <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
           @if (pendingRequestCount() > 0) {
             <span class="absolute top-2 right-2 w-2 h-2 bg-theme-teal rounded-full"></span>
           }
         </button>
       </div>
+
+      @if (isNotificationsOpen()) {
+        <section class="absolute top-[68px] right-margin-mobile left-margin-mobile bg-theme-surface border border-theme-border rounded-2xl p-md shadow-[0_18px_50px_rgba(0,0,0,.35)] flex flex-col gap-sm">
+          <div class="flex items-center justify-between gap-md">
+            <div>
+              <p class="text-headline-md font-headline-md text-on-surface m-0">{{ pendingRequestCount() }} invite{{ pendingRequestCount() === 1 ? '' : 's' }}</p>
+              <p class="text-body-md font-body-md text-on-surface-variant m-0 mt-1">Requests waiting in your inbox</p>
+            </div>
+            <a routerLink="/inbox" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center no-underline">
+              <span class="material-symbols-outlined text-[20px]">inbox</span>
+            </a>
+          </div>
+          <div class="flex flex-col gap-xs">
+            @for (request of notificationRequests(); track request.id) {
+              <a routerLink="/inbox" class="bg-surface-container-lowest rounded-xl px-sm py-xs flex items-center gap-sm no-underline text-inherit">
+                <span class="material-symbols-outlined text-theme-blue text-[18px]">{{ requestIcon(request) }}</span>
+                <span class="text-body-md font-body-md text-on-surface truncate">{{ request.title }}</span>
+              </a>
+            } @empty {
+              <div class="bg-surface-container-lowest rounded-xl px-sm py-xs text-body-md font-body-md text-on-surface-variant">
+                No pending requests.
+              </div>
+            }
+          </div>
+          <a routerLink="/inbox" class="w-full min-h-11 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center gap-xs no-underline text-body-md font-body-md font-semibold">
+            Open inbox
+            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+          </a>
+        </section>
+      }
     </header>
 
     <app-slide-alert
@@ -37,6 +67,7 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
       title="Task request pending"
       [message]="pendingRequestCount() + ' request waiting for review'"
       actionText="Review"
+      (actionClicked)="openInboxFromAlert()"
     />
 
     <div class="px-margin-mobile flex flex-col gap-xl">
@@ -173,7 +204,13 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
       </section>
 
       <section class="flex flex-col gap-md">
-        <h3 class="text-headline-md font-headline-md text-on-surface m-0">Projects</h3>
+        <div class="flex items-center justify-between gap-md">
+          <h3 class="text-headline-md font-headline-md text-on-surface m-0">Projects</h3>
+          <a routerLink="/inbox" class="min-h-9 px-sm rounded-full bg-theme-surface border border-theme-border text-on-surface flex items-center gap-xs no-underline text-label-md font-label-md">
+            <span class="material-symbols-outlined text-[17px]">inbox</span>
+            Inbox
+          </a>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-sm">
           @for (project of dashboard()?.activeProjects ?? []; track project.project.id) {
             <a [routerLink]="['/project', project.project.id]" class="bg-theme-project-bg rounded-2xl p-md flex flex-col gap-sm border border-theme-project-accent/20 relative overflow-hidden no-underline">
@@ -202,11 +239,13 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
 export class TodayComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly todayService = inject(TodayService);
+  private readonly router = inject(Router);
   private readonly today = new Date();
   private readonly taskCreatedHandler = () => void this.loadToday();
 
   readonly dashboard = signal<TodayDashboardDto | null>(null);
   readonly isLoading = signal(true);
+  readonly isNotificationsOpen = signal(false);
   readonly currentUser = this.auth.currentUser;
   readonly displayName = computed(() => {
     const user = this.currentUser();
@@ -228,6 +267,7 @@ export class TodayComponent implements OnDestroy {
   });
   readonly donePercentage = computed(() => Math.round(this.dashboard()?.summary.donePercentage ?? 0));
   readonly pendingRequestCount = computed(() => this.dashboard()?.summary.pendingRequestCount ?? 0);
+  readonly notificationRequests = computed(() => (this.dashboard()?.pendingTaskRequests ?? []).slice(0, 3));
   readonly categorySummary = computed(() => {
     const summary = this.dashboard()?.summary;
     return [
@@ -275,6 +315,20 @@ export class TodayComponent implements OnDestroy {
 
   isProjectTask(task: TaskDto): boolean {
     return task.type === 'Project' || task.type === 1;
+  }
+
+  toggleNotifications(): void {
+    this.isNotificationsOpen.update(value => !value);
+  }
+
+  openInboxFromAlert(): void {
+    void this.router.navigate(['/inbox']);
+  }
+
+  requestIcon(request: TodayDashboardDto['pendingTaskRequests'][number]): string {
+    if (request.type === 'ProjectInvite' || request.type === 0) return 'group_add';
+    if (request.type === 'SectionAssignment' || request.type === 1) return 'view_column';
+    return 'assignment_turned_in';
   }
 
   private async loadToday(): Promise<void> {

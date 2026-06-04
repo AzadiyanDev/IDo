@@ -55,6 +55,33 @@ public sealed class IdentityAccountService(UserManager<ApplicationUser> userMana
             : IdentityOperationResult.Failed(result.Errors.Select(x => x.Description).ToArray());
     }
 
+    public async Task<IdentityOperationResult> UpdateAccountAsync(Guid userProfileId, string userName, string email, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.Users.SingleOrDefaultAsync(x => x.UserProfileId == userProfileId, cancellationToken);
+        if (user is null) return IdentityOperationResult.Failed(["Identity account not found."]);
+
+        var errors = new List<string>();
+        if (!string.Equals(user.UserName, userName, StringComparison.Ordinal))
+        {
+            var userNameResult = await userManager.SetUserNameAsync(user, userName);
+            if (!userNameResult.Succeeded) errors.AddRange(userNameResult.Errors.Select(x => x.Description));
+        }
+
+        if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+        {
+            var emailResult = await userManager.SetEmailAsync(user, email);
+            if (!emailResult.Succeeded) errors.AddRange(emailResult.Errors.Select(x => x.Description));
+        }
+
+        if (errors.Count > 0) return IdentityOperationResult.Failed(errors);
+
+        user.EmailConfirmed = true;
+        var updateResult = await userManager.UpdateAsync(user);
+        return updateResult.Succeeded
+            ? IdentityOperationResult.Success()
+            : IdentityOperationResult.Failed(updateResult.Errors.Select(x => x.Description).ToArray());
+    }
+
     public async Task<bool> CheckPasswordAsync(Guid accountId, string password, CancellationToken cancellationToken = default)
     {
         var user = await userManager.FindByIdAsync(accountId.ToString());

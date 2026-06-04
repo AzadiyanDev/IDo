@@ -23,6 +23,9 @@ interface ProjectListItem {
         <p class="font-body-md text-body-md text-on-surface-variant m-0 mt-0.5">{{ headerSubtitle() }}</p>
       </div>
       <div class="flex gap-sm shrink-0">
+        <a routerLink="/inbox" class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 active:scale-95 transition-all no-underline" aria-label="Inbox">
+          <span class="material-symbols-outlined">inbox</span>
+        </a>
         <button type="button" (click)="toggleSearch()" class="w-10 h-10 rounded-full bg-theme-surface border border-theme-border flex items-center justify-center text-on-surface hover:opacity-80 active:scale-95 transition-all">
           <span class="material-symbols-outlined">{{ isSearchOpen() ? 'close' : 'search' }}</span>
         </button>

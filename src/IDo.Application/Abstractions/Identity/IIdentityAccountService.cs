@@ -6,6 +6,7 @@ public interface IIdentityAccountService
     Task<IdentityAccountDto?> FindByUserProfileIdAsync(Guid userProfileId, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<IdentityAccountDto>> SearchByUserNameAsync(string query, int take, CancellationToken cancellationToken = default);
     Task<IdentityOperationResult> CreateAccountAsync(Guid userProfileId, string userName, string email, string password, CancellationToken cancellationToken = default);
+    Task<IdentityOperationResult> UpdateAccountAsync(Guid userProfileId, string userName, string email, CancellationToken cancellationToken = default);
     Task<bool> CheckPasswordAsync(Guid accountId, string password, CancellationToken cancellationToken = default);
 }
 

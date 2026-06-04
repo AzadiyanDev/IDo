@@ -11,6 +11,7 @@ export const routes: Routes = [
   { path: 'projects', canActivate: [authGuard], loadComponent: () => import('./features/projects/projects').then(m => m.ProjectsComponent) },
   { path: 'progress', canActivate: [authGuard], loadComponent: () => import('./features/progress/progress').then(m => m.ProgressComponent) },
   { path: 'inbox', canActivate: [authGuard], loadComponent: () => import('./features/inbox/inbox').then(m => m.InboxComponent) },
+  { path: 'profile', canActivate: [authGuard], loadComponent: () => import('./features/profile/profile').then(m => m.ProfileComponent) },
   { path: 'project/:id', canActivate: [authGuard], loadComponent: () => import('./features/projects/project-details').then(m => m.ProjectDetailsComponent) },
   { path: 'task/:id', canActivate: [authGuard], loadComponent: () => import('./features/today/task-details').then(m => m.TaskDetailsComponent) }
 ];

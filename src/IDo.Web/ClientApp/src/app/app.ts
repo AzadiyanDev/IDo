@@ -38,6 +38,7 @@ export class App {
       const hideNav = event.urlAfterRedirects.includes('/project/') || 
                       event.urlAfterRedirects.includes('/task/') ||
                       event.urlAfterRedirects.includes('/inbox') ||
+                      event.urlAfterRedirects.includes('/profile') ||
                       event.urlAfterRedirects.includes('/login') ||
                       event.urlAfterRedirects.includes('/register');
       this.showBottomNav.set(!hideNav);

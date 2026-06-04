@@ -8,3 +8,11 @@ public sealed record UserProfileDto(
     string? PhoneNumber,
     bool IsActive,
     UserSettingsDto Settings);
+
+public sealed record UpdateUserProfileRequest(
+    string FullName,
+    string UserName,
+    string Email,
+    string? PhoneNumber,
+    string? AvatarUrl,
+    UserSettingsDto Settings);

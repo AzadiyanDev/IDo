@@ -62,19 +62,21 @@ interface AssignmentUserOption {
       </div>
     } @else if (details(); as detail) {
       <div class="px-gutter-mobile py-md flex flex-col gap-lg pb-10">
-        <section class="bg-theme-project-bg rounded-[24px] p-lg flex flex-col gap-md relative overflow-hidden border border-theme-project-accent/20">
+        <section
+          class="project-hero rounded-[24px] p-lg flex flex-col gap-md relative overflow-hidden border"
+          [style.--project-color]="projectColor()">
           <div class="flex justify-between items-start gap-md z-10">
             <div class="flex flex-col gap-2 min-w-0">
-              <div class="inline-flex bg-theme-project-accent/20 text-theme-project-accent px-3 py-1 rounded-full font-label-md w-max">
+              <div class="project-status-pill inline-flex px-3 py-1 rounded-full font-label-md w-max">
                 {{ statusLabel(detail.project.status) }}
               </div>
               <h2 class="font-headline-lg-mobile text-white m-0 mt-1 truncate">{{ detail.project.title }}</h2>
-              <p class="font-body-md text-theme-project-accent opacity-90 m-0 mt-1 line-clamp-2">{{ detail.project.description || 'No project description yet.' }}</p>
+              <p class="project-description font-body-md opacity-90 m-0 mt-1 line-clamp-2">{{ detail.project.description || 'No project description yet.' }}</p>
             </div>
             <div class="relative w-20 h-20 flex items-center justify-center shrink-0">
               <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path class="text-theme-project-accent/10 stroke-current" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-                <path class="text-theme-project-accent stroke-current" stroke-width="3" [attr.stroke-dasharray]="projectProgress() + ', 100'" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                <path class="project-ring-bg stroke-current" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                <path class="project-ring stroke-current" stroke-width="3" [attr.stroke-dasharray]="projectProgress() + ', 100'" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
               </svg>
               <span class="absolute font-headline-md text-white font-bold">{{ projectProgress() }}%</span>
             </div>
@@ -129,10 +131,10 @@ interface AssignmentUserOption {
           </div>
 
           @for (section of detail.sections; track section.id) {
-            <article class="section-card">
+            <article class="section-card" [style.--section-color]="sectionColorValue(section)">
               <div class="flex justify-between items-start gap-sm">
                 <div class="flex items-start gap-sm min-w-0">
-                  <div class="section-icon" [style.color]="section.color || null">
+                  <div class="section-icon">
                     <span class="material-symbols-outlined text-[18px]">{{ section.icon || 'view_column' }}</span>
                   </div>
                   <div class="min-w-0">
@@ -162,12 +164,12 @@ interface AssignmentUserOption {
                       </button>
                     }
                   </div>
-                  <span class="font-label-md text-on-surface-variant">{{ round(section.progressPercentage) }}%</span>
+                  <span class="font-label-md" [style.color]="sectionColorValue(section)">{{ round(section.progressPercentage) }}%</span>
                 </div>
               </div>
 
-              <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
-                <div class="h-full rounded-full bg-theme-project-accent transition-all" [style.width.%]="section.progressPercentage"></div>
+              <div class="section-progress-track">
+                <div class="section-progress-fill" [style.width.%]="section.progressPercentage"></div>
               </div>
 
               <div class="flex flex-col gap-xs">
@@ -397,14 +399,22 @@ interface AssignmentUserOption {
   styles: [`
     :host { display: block; min-height: 100%; }
     .section-label { margin: 0; font: 700 11px/14px Inter, sans-serif; color: var(--color-on-surface-variant); text-transform: uppercase; letter-spacing: 0; }
+    .project-hero { --project-color: var(--color-theme-project-accent); background: color-mix(in srgb, var(--project-color) 20%, var(--color-theme-bg)); border-color: color-mix(in srgb, var(--project-color) 36%, transparent); }
+    .project-hero::after { content: ""; position: absolute; right: -28px; bottom: -32px; width: 132px; height: 132px; border-radius: 999px; background: color-mix(in srgb, var(--project-color) 18%, transparent); filter: blur(28px); pointer-events: none; }
+    .project-status-pill { background: color-mix(in srgb, var(--project-color) 22%, transparent); color: var(--project-color); }
+    .project-description { color: var(--project-color); }
+    .project-ring-bg { color: color-mix(in srgb, var(--project-color) 14%, transparent); }
+    .project-ring { color: var(--project-color); }
     .stat-box { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 14px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
-    .stat-box span { color: var(--color-theme-project-accent); opacity: .78; font: 600 11px/14px Inter, sans-serif; }
+    .stat-box span { color: var(--project-color); opacity: .78; font: 600 11px/14px Inter, sans-serif; }
     .stat-box strong { color: #fff; font: 700 18px/22px Inter, sans-serif; }
     .member-pill { min-width: 76px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .avatar { width: 44px; height: 44px; border-radius: 999px; overflow: hidden; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font: 700 12px/1 Inter, sans-serif; }
     .action-button { height: 50px; border-radius: 18px; border: 1px solid var(--color-theme-border); background: var(--color-theme-surface); color: var(--color-on-surface); display: flex; align-items: center; justify-content: center; gap: 8px; font: 700 13px/18px Inter, sans-serif; }
-    .section-card { border: 1px solid var(--color-theme-border); background: var(--color-theme-surface); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-    .section-icon { width: 36px; height: 36px; border-radius: 14px; background: var(--color-theme-elevated); border: 1px solid var(--color-theme-border); display: flex; align-items: center; justify-content: center; color: var(--color-theme-project-accent); flex-shrink: 0; }
+    .section-card { --section-color: var(--color-theme-project-accent); border: 1px solid color-mix(in srgb, var(--section-color) 28%, var(--color-theme-border)); background: var(--color-theme-surface); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .section-icon { width: 36px; height: 36px; border-radius: 14px; background: color-mix(in srgb, var(--section-color) 14%, var(--color-theme-elevated)); border: 1px solid color-mix(in srgb, var(--section-color) 30%, var(--color-theme-border)); display: flex; align-items: center; justify-content: center; color: var(--section-color); flex-shrink: 0; }
+    .section-progress-track { width: 100%; height: 8px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--section-color) 13%, var(--color-surface-container-high)); }
+    .section-progress-fill { height: 100%; border-radius: 999px; background: var(--section-color); transition: width 280ms ease; }
     .badge { padding: 4px 8px; border-radius: 999px; background: var(--color-surface-container-high); color: var(--color-on-surface-variant); font: 700 10px/12px Inter, sans-serif; white-space: nowrap; }
     .badge-pending { background: rgba(255, 192, 0, .14); color: var(--color-theme-orange); }
     .mini-button, .icon-pill { border: none; background: var(--color-surface-container-high); color: var(--color-on-surface); border-radius: 999px; padding: 8px 12px; display: inline-flex; align-items: center; gap: 5px; font: 700 12px/14px Inter, sans-serif; }
@@ -707,6 +717,14 @@ export class ProjectDetailsComponent implements OnDestroy {
 
   projectProgress(): number {
     return Math.round(this.details()?.progress.percentage ?? 0);
+  }
+
+  projectColor(): string {
+    return this.details()?.project.color || '#B072FF';
+  }
+
+  sectionColorValue(section: ProjectSectionDto): string {
+    return section.color || this.projectColor();
   }
 
   round(value: number): number {

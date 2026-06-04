@@ -21,6 +21,7 @@ yarn-error.log*
 *.sqlite3
 
 src/IDo.Web/wwwroot/browser/
+src/IDo.Web/wwwroot/uploads/
 src/IDo.Web/wwwroot/*.js
 src/IDo.Web/wwwroot/*.css
 src/IDo.Web/wwwroot/3rdpartylicenses.txt

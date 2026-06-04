@@ -532,6 +532,7 @@ public sealed class BusinessRuleTests
         public Task<IDo.Application.Abstractions.Identity.IdentityAccountDto?> FindByUserProfileIdAsync(Guid userProfileId, CancellationToken cancellationToken = default) => Task.FromResult<IDo.Application.Abstractions.Identity.IdentityAccountDto?>(null);
         public Task<IReadOnlyCollection<IDo.Application.Abstractions.Identity.IdentityAccountDto>> SearchByUserNameAsync(string query, int take, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyCollection<IDo.Application.Abstractions.Identity.IdentityAccountDto>>(Array.Empty<IDo.Application.Abstractions.Identity.IdentityAccountDto>());
         public Task<IDo.Application.Abstractions.Identity.IdentityOperationResult> CreateAccountAsync(Guid userProfileId, string userName, string email, string password, CancellationToken cancellationToken = default) => Task.FromResult(IDo.Application.Abstractions.Identity.IdentityOperationResult.Success());
+        public Task<IDo.Application.Abstractions.Identity.IdentityOperationResult> UpdateAccountAsync(Guid userProfileId, string userName, string email, CancellationToken cancellationToken = default) => Task.FromResult(IDo.Application.Abstractions.Identity.IdentityOperationResult.Success());
         public Task<bool> CheckPasswordAsync(Guid accountId, string password, CancellationToken cancellationToken = default) => Task.FromResult(false);
     }
 

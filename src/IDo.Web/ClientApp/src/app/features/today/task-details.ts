@@ -7,6 +7,7 @@ import { TaskDto, TaskStatus } from '../../core/today.service';
 import { TaskCommentDto, TaskDetailsDto, TasksService } from '../../core/tasks.service';
 
 type VisibleStatus = 'Todo' | 'InProgress' | 'Review' | 'Done';
+type HoldAction = 'next' | 'previous';
 
 @Component({
   selector: 'app-task-details',
@@ -213,25 +214,44 @@ type VisibleStatus = 'Todo' | 'InProgress' | 'Review' | 'Done';
       </div>
 
       <div class="fixed bottom-0 left-0 w-full z-50 p-margin-mobile bg-theme-bg/70 backdrop-blur-md border-t border-theme-border/50 rounded-t-[32px] flex justify-center items-center">
-        <div class="w-full max-w-[448px] mx-auto relative flex justify-center">
+        <div class="hold-actions w-full max-w-[448px] mx-auto">
           <button
-            (touchstart)="startHold($event)" (touchend)="cancelHold()" (touchcancel)="cancelHold()"
-            (mousedown)="startHold($event)" (mouseup)="cancelHold()" (mouseleave)="cancelHold()"
+            (touchstart)="startHold($event, 'next')" (touchend)="cancelHold()" (touchcancel)="cancelHold()"
+            (mousedown)="startHold($event, 'next')" (mouseup)="cancelHold()" (mouseleave)="cancelHold()"
             [disabled]="!nextStatus() || isSavingStatus()"
-            class="hold-button"
+            class="hold-button hold-next"
             [class.hold-complete]="!nextStatus()"
-            [class.hold-active]="isHolding()">
+            [class.hold-active]="activeHoldAction() === 'next'"
+            [class.hold-suppressed]="activeHoldAction() === 'previous'">
             @if (nextStatus()) {
               <div
                 class="hold-fill"
-                [style.background]="holdFillColor()"
-                [class.hold-fill-active]="isHolding()">
+                [style.background]="holdFillColor('next')"
+                [class.hold-fill-active]="activeHoldAction() === 'next'">
               </div>
             }
             <span class="material-symbols-outlined z-10" [style.font-variation-settings]="!nextStatus() ? '&quot;FILL&quot; 1' : '&quot;wght&quot; 300'">
               {{ nextStatus() ? 'fingerprint' : 'check_circle' }}
             </span>
             <span class="font-headline-md z-10 text-[16px]">{{ actionLabel() }}</span>
+          </button>
+          <button
+            (touchstart)="startHold($event, 'previous')" (touchend)="cancelHold()" (touchcancel)="cancelHold()"
+            (mousedown)="startHold($event, 'previous')" (mouseup)="cancelHold()" (mouseleave)="cancelHold()"
+            [disabled]="!previousStatus() || isSavingStatus()"
+            class="hold-button hold-previous"
+            [class.hold-active]="activeHoldAction() === 'previous'"
+            [class.hold-suppressed]="activeHoldAction() === 'next'"
+            aria-label="Hold to go back one status">
+            @if (previousStatus()) {
+              <div
+                class="hold-fill hold-fill-reverse"
+                [style.background]="holdFillColor('previous')"
+                [class.hold-fill-active]="activeHoldAction() === 'previous'">
+              </div>
+            }
+            <span class="material-symbols-outlined z-10">undo</span>
+            <span class="hold-previous-label font-headline-md z-10 text-[16px]">{{ previousActionLabel() }}</span>
           </button>
         </div>
       </div>
@@ -264,11 +284,20 @@ type VisibleStatus = 'Todo' | 'InProgress' | 'Review' | 'Done';
     .comment-enter { animation: commentEnter 360ms ease both; }
     .avatar { width: 40px; height: 40px; border-radius: 999px; overflow: hidden; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font: 700 12px/1 Inter, sans-serif; }
     .avatar-creator { border-color: rgba(62, 174, 255, 0.32); }
-    .hold-button { width: 100%; max-width: 320px; height: 64px; border-radius: 999px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; user-select: none; outline: none; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); color: var(--color-on-surface); transition: transform 180ms ease, border-color 240ms ease, background-color 240ms ease; }
+    .hold-actions { display: flex; gap: 10px; align-items: center; justify-content: center; }
+    .hold-button { height: 64px; border-radius: 999px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; user-select: none; outline: none; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); color: var(--color-on-surface); transition: flex-basis 220ms ease, flex-grow 220ms ease, transform 180ms ease, border-color 240ms ease, background-color 240ms ease, opacity 180ms ease, padding 180ms ease; }
+    .hold-next { flex: 4 1 80%; min-width: 0; }
+    .hold-previous { flex: 1 1 20%; min-width: 64px; padding-inline: 0; color: var(--color-theme-orange); }
+    .hold-previous-label { display: none; white-space: nowrap; }
+    .hold-previous.hold-active .hold-previous-label { display: inline; }
+    .hold-active { flex: 1 0 100%; padding-inline: 18px; }
+    .hold-suppressed { flex: 0 1 0; min-width: 0; opacity: 0; padding: 0; border-width: 0; pointer-events: none; }
     .hold-button:active, .hold-active { transform: scale(0.985); }
     .hold-button:disabled { cursor: default; }
+    .hold-previous:disabled { color: var(--color-on-surface-variant); opacity: 0.45; }
     .hold-complete { background: rgba(0, 244, 185, 0.16); border-color: rgba(0, 244, 185, 0.32); color: var(--color-theme-green); }
     .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0%; opacity: 0.28; transition: width 220ms ease-out; }
+    .hold-fill-reverse { inset: 0 0 0 auto; }
     .hold-fill-active { width: 100%; transition: width 2000ms linear; }
     @keyframes statusPulse { 0% { transform: scale(1); } 45% { transform: scale(1.06); } 100% { transform: scale(1); } }
     @keyframes commentEnter { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -292,6 +321,7 @@ export class TaskDetailsComponent implements OnDestroy {
   readonly isLoading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly isHolding = signal(false);
+  readonly activeHoldAction = signal<HoldAction | null>(null);
   readonly isSavingStatus = signal(false);
   readonly isPostingComment = signal(false);
   readonly commentDraft = signal('');
@@ -312,6 +342,11 @@ export class TaskDetailsComponent implements OnDestroy {
     if (status === 'InProgress') return 'Review';
     return 'Done';
   });
+  readonly previousStatus = computed<TaskStatus | null>(() => {
+    const currentIndex = this.statusSteps().indexOf(this.activeStatus());
+    if (currentIndex <= 0) return null;
+    return this.statusSteps()[currentIndex - 1];
+  });
 
   constructor() {
     void this.loadTask();
@@ -327,18 +362,21 @@ export class TaskDetailsComponent implements OnDestroy {
     }
   }
 
-  startHold(event: Event): void {
+  startHold(event: Event, action: HoldAction): void {
     event.preventDefault();
-    if (!this.nextStatus() || this.isSavingStatus() || this.isHolding()) return;
+    const targetStatus = this.targetStatus(action);
+    if (!targetStatus || this.isSavingStatus() || this.isHolding()) return;
     window.navigator.vibrate?.(50);
     this.isHolding.set(true);
-    this.holdTimer = setTimeout(() => void this.advanceStatus(), this.holdDuration);
+    this.activeHoldAction.set(action);
+    this.holdTimer = setTimeout(() => void this.changeHeldStatus(action), this.holdDuration);
   }
 
   cancelHold(): void {
     if (this.holdTimer) clearTimeout(this.holdTimer);
     this.holdTimer = undefined;
     this.isHolding.set(false);
+    this.activeHoldAction.set(null);
   }
 
   async submitComment(event: Event): Promise<void> {
@@ -385,7 +423,14 @@ export class TaskDetailsComponent implements OnDestroy {
     return 'Hold 2s to mark done';
   }
 
-  holdFillColor(): string {
+  previousActionLabel(): string {
+    const previous = this.previousStatus();
+    if (!previous) return 'Back';
+    return `Back to ${this.statusLabel(previous)}`;
+  }
+
+  holdFillColor(action: HoldAction): string {
+    if (action === 'previous') return 'var(--color-theme-orange)';
     return this.nextStatus() === 'InProgress' ? 'var(--color-theme-blue)' : 'var(--color-theme-green)';
   }
 
@@ -479,12 +524,12 @@ export class TaskDetailsComponent implements OnDestroy {
     return this.hubConnection?.invoke('JoinTask', this.taskId).catch(() => undefined) ?? Promise.resolve();
   }
 
-  private async advanceStatus(): Promise<void> {
-    const next = this.nextStatus();
-    if (!next) return;
+  private async changeHeldStatus(action: HoldAction): Promise<void> {
+    const targetStatus = this.targetStatus(action);
+    if (!targetStatus) return;
     this.isSavingStatus.set(true);
     try {
-      const task = await this.tasksService.changeStatus(this.taskId, next);
+      const task = await this.tasksService.changeStatus(this.taskId, targetStatus);
       this.mergeTask(task);
       window.navigator.vibrate?.([50, 50, 50]);
     } finally {
@@ -519,6 +564,10 @@ export class TaskDetailsComponent implements OnDestroy {
     if (this.statusPulseTimer) clearTimeout(this.statusPulseTimer);
     requestAnimationFrame(() => this.statusPulse.set(true));
     this.statusPulseTimer = setTimeout(() => this.statusPulse.set(false), 500);
+  }
+
+  private targetStatus(action: HoldAction): TaskStatus | null {
+    return action === 'next' ? this.nextStatus() : this.previousStatus();
   }
 
   isProjectTask(): boolean {
