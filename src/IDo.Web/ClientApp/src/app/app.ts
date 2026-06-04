@@ -4,6 +4,7 @@ import { filter } from 'rxjs/operators';
 import { BottomNavComponent } from './shared/bottom-nav/bottom-nav';
 import { CreateNewModalComponent, CreateNewMode } from './shared/create-new-modal/create-new-modal';
 import { I18nService } from './core/i18n.service';
+import { PwaInstallService } from './core/pwa-install.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,6 +32,7 @@ export class App {
   showBottomNav = signal(true);
   router = inject(Router);
   readonly i18n = inject(I18nService);
+  private readonly pwaInstall = inject(PwaInstallService);
 
   constructor() {
     this.router.events.pipe(

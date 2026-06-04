@@ -5,6 +5,7 @@ using IDo.Web.DependencyInjection;
 using IDo.Web.Hubs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.StaticFiles;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,17 +57,19 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 var webRoot = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
 var angularBrowserRoot = Path.Combine(webRoot, "browser");
+var staticContentTypes = new FileExtensionContentTypeProvider();
+staticContentTypes.Mappings[".webmanifest"] = "application/manifest+json";
 if (Directory.Exists(angularBrowserRoot))
 {
     var angularFiles = new PhysicalFileProvider(angularBrowserRoot);
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = angularFiles });
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = angularFiles });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = angularFiles, ContentTypeProvider = staticContentTypes });
 }
 else
 {
     app.UseDefaultFiles();
 }
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticContentTypes });
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<TaskHub>("/hubs/tasks");

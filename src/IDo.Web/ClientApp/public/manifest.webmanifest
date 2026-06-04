@@ -1,0 +1,29 @@
+{
+  "name": "IDo",
+  "short_name": "IDo",
+  "description": "A mobile-first workspace for tasks, habits, projects, and progress.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#05070A",
+  "theme_color": "#05070A",
+  "orientation": "portrait-primary",
+  "categories": ["productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/ido-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/ido-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

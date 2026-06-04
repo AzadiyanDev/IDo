@@ -1,5 +1,14 @@
 # IDo
 
+<p align="center">
+  <img src="src/IDo.Web/wwwroot/-2147483648_-210174.jpg" width="120" alt="IDo app icon" />
+</p>
+
+<p align="center" dir="rtl">
+  <strong>برای استفاده برید به این آدرس:</strong>
+  <a href="https://ido.azadiyan.dev">ido.azadiyan.dev</a>
+</p>
+
 IDo is a mobile-first execution workspace for people who want one place to plan the day, track habits, manage project work, and understand progress without switching between disconnected tools. It is built around daily execution: what needs attention today, what is already moving, what is blocked, and what should happen next.
 
 It combines personal tasks, recurring routines, collaborative projects, progress analytics, and profile settings into a focused app experience designed for fast everyday use.

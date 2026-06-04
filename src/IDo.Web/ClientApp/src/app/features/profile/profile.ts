@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService, AuthUser, UserProfile, UserSettings } from '../../core/auth.service';
 import { CalendarService } from '../../core/calendar.service';
 import { I18nService } from '../../core/i18n.service';
+import { PwaInstallService } from '../../core/pwa-install.service';
 import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal';
 
 @Component({
@@ -89,6 +90,17 @@ import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal'
             </span>
             <span class="material-symbols-outlined text-on-surface-variant">swap_horiz</span>
           </button>
+
+          <button type="button" (click)="installApp()" class="profile-row border-t border-theme-border">
+            <span class="profile-row-icon bg-secondary-container text-on-secondary-container">
+              <span class="material-symbols-outlined text-[19px]">install_mobile</span>
+            </span>
+            <span class="profile-row-text">
+              <span class="profile-row-title">{{ i18n.text('Install') }}</span>
+              <span class="profile-row-caption">{{ installStatusLabel() }}</span>
+            </span>
+            <span class="material-symbols-outlined text-on-surface-variant">{{ installIcon() }}</span>
+          </button>
         </div>
       </section>
     </div>
@@ -174,6 +186,35 @@ import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal'
             <button type="button" (click)="isLogoutOpen.set(false)" class="secondary-button">{{ i18n.text('Cancel') }}</button>
             <button type="button" (click)="confirmLogout()" class="danger-button">{{ i18n.text('Log out') }}</button>
           </div>
+        </section>
+      </div>
+    }
+
+    @if (isInstallHelpOpen()) {
+      <div class="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center px-margin-mobile">
+        <section class="w-full max-w-[372px] bg-theme-surface border border-theme-border rounded-2xl p-lg flex flex-col gap-lg">
+          <div class="flex items-start gap-md">
+            <span class="profile-row-icon bg-secondary-container text-on-secondary-container">
+              <span class="material-symbols-outlined text-[21px]">{{ installIcon() }}</span>
+            </span>
+            <div class="flex-1 min-w-0">
+              <h2 class="text-headline-md font-headline-md text-on-surface m-0">{{ installHelpTitle() }}</h2>
+              <p class="text-body-md font-body-md text-on-surface-variant mt-xs mb-0">{{ i18n.text('Use these steps to install IDo as a standalone app.') }}</p>
+            </div>
+            <button type="button" (click)="closeInstallHelp()" class="icon-button">
+              <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">close</span>
+            </button>
+          </div>
+
+          <ol class="install-step-list">
+            @for (step of installInstructions(); track step) {
+              <li>{{ step }}</li>
+            }
+          </ol>
+
+          <button type="button" (click)="closeInstallHelp()" class="profile-save-button">
+            {{ i18n.text('Done') }}
+          </button>
         </section>
       </div>
     }
@@ -296,6 +337,19 @@ import { LoadingModalComponent } from '../../shared/loading-modal/loading-modal'
       background: rgba(0, 244, 185, 0.18);
       animation: avatar-success-pop 420ms ease both;
     }
+    .install-step-list {
+      margin: 0;
+      padding-inline-start: 22px;
+      color: var(--color-on-surface);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font: 600 13px/19px var(--font-app);
+    }
+    .install-step-list li::marker {
+      color: var(--color-secondary);
+      font-weight: 800;
+    }
     @keyframes avatar-upload-spin {
       to { transform: rotate(360deg); }
     }
@@ -309,6 +363,7 @@ export class ProfileComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly calendar = inject(CalendarService);
+  private readonly pwaInstall = inject(PwaInstallService);
   readonly i18n = inject(I18nService);
 
   readonly currentUser = this.auth.currentUser;
@@ -322,6 +377,7 @@ export class ProfileComponent implements OnDestroy {
   readonly editSettings = signal<UserSettings>(this.settings());
   readonly isEditOpen = signal(false);
   readonly isLogoutOpen = signal(false);
+  readonly isInstallHelpOpen = signal(false);
   readonly isSaving = signal(false);
   readonly isUploadingAvatar = signal(false);
   readonly avatarUploadSucceeded = signal(false);
@@ -335,6 +391,32 @@ export class ProfileComponent implements OnDestroy {
   readonly editInitials = computed(() => this.initialsFor(this.fullName() || this.editUserName()));
   readonly isBusy = computed(() => this.isSaving() || this.isUploadingAvatar());
   readonly calendarTypeLabel = computed(() => this.calendar.calendarTypeLabel(this.calendar.normalizeCalendarType(this.settings().calendarType)));
+  readonly installStatusLabel = computed(() => {
+    if (this.pwaInstall.isInstalled()) return this.i18n.text('Installed');
+    if (this.pwaInstall.isPrompting()) return this.i18n.text('Preparing install...');
+    if (this.pwaInstall.canPrompt()) return this.i18n.text('Install IDo as an app');
+    if (this.pwaInstall.isIos()) return this.i18n.text('Use Safari share to install');
+    return this.i18n.text('Use your browser menu to install');
+  });
+  readonly installIcon = computed(() => {
+    if (this.pwaInstall.isInstalled()) return 'check_circle';
+    return this.pwaInstall.isIos() ? 'ios_share' : 'download';
+  });
+  readonly installHelpTitle = computed(() => this.pwaInstall.isIos()
+    ? this.i18n.text('Install IDo on iPhone')
+    : this.i18n.text('Install IDo'));
+  readonly installInstructions = computed(() => (this.pwaInstall.isIos()
+    ? [
+      'Open this page in Safari.',
+      'Tap Share.',
+      'Choose Add to Home Screen.',
+      'Keep the name IDo and tap Add.'
+    ]
+    : [
+      'Open the browser menu.',
+      'Choose Install app or Add to Home screen.',
+      'Confirm the app name IDo.'
+    ]).map((step) => this.i18n.text(step)));
   private avatarSuccessTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -421,6 +503,30 @@ export class ProfileComponent implements OnDestroy {
   async toggleCalendarType(): Promise<void> {
     const current = this.calendar.normalizeCalendarType(this.settings().calendarType);
     await this.saveSettings({ ...this.settings(), calendarType: current === 'Jalali' ? 'Gregorian' : 'Jalali' });
+  }
+
+  async installApp(): Promise<void> {
+    const result = await this.pwaInstall.install();
+    if (result === 'accepted') {
+      this.showStatus(this.i18n.text('IDo is ready on your device.'));
+      return;
+    }
+
+    if (result === 'installed') {
+      this.showStatus(this.i18n.text('IDo is already installed.'));
+      return;
+    }
+
+    if (result === 'dismissed') {
+      this.showStatus(this.i18n.text('Installation was dismissed.'));
+      return;
+    }
+
+    this.isInstallHelpOpen.set(true);
+  }
+
+  closeInstallHelp(): void {
+    this.isInstallHelpOpen.set(false);
   }
 
   async confirmLogout(): Promise<void> {
