@@ -7,6 +7,7 @@ export interface UserSettings {
   language: string;
   theme: string;
   weekStartDay: string;
+  calendarType: 'Gregorian' | 'Jalali';
   defaultReminderTime: string | null;
 }
 

@@ -3,13 +3,14 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { BottomNavComponent } from './shared/bottom-nav/bottom-nav';
 import { CreateNewModalComponent, CreateNewMode } from './shared/create-new-modal/create-new-modal';
+import { I18nService } from './core/i18n.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
   imports: [RouterOutlet, BottomNavComponent, CreateNewModalComponent],
   template: `
-    <div class="h-screen w-full flex flex-col relative overflow-hidden bg-theme-bg text-on-surface font-body-md antialiased">
+    <div class="h-screen w-full flex flex-col relative overflow-hidden bg-theme-bg text-on-surface font-body-md antialiased" [attr.dir]="i18n.dir()" [attr.lang]="i18n.language()">
       <main class="flex-1 overflow-y-auto w-full max-w-[448px] mx-auto relative z-10 pb-bottom-nav hide-scrollbar">
         <router-outlet></router-outlet>
       </main>
@@ -29,6 +30,7 @@ export class App {
   createMode = signal<CreateNewMode>('task');
   showBottomNav = signal(true);
   router = inject(Router);
+  readonly i18n = inject(I18nService);
 
   constructor() {
     this.router.events.pipe(
