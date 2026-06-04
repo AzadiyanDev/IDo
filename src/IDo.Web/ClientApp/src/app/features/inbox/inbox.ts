@@ -1,8 +1,9 @@
-import { Location } from '@angular/common';
+﻿import { Location } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TaskRequestsService } from '../../core/task-requests.service';
+import { I18nService } from '../../core/i18n.service';
 import type { TaskRequestDto } from '../../core/today.service';
 
 type HoldAction = 'accept' | 'reject';
@@ -16,7 +17,7 @@ type HoldAction = 'accept' | 'reject';
         <span class="material-symbols-outlined text-[20px]">arrow_back</span>
       </button>
       <div class="flex flex-col items-center min-w-0">
-        <h1 class="font-headline-md text-headline-md m-0 leading-tight text-on-surface">{{ selectedRequest() ? 'Request' : 'Inbox' }}</h1>
+        <h1 class="font-headline-md text-headline-md m-0 leading-tight text-on-surface">{{ selectedRequest() ? i18n.text('Request') : i18n.text('Inbox') }}</h1>
         <span class="font-label-md text-label-md text-on-surface-variant">{{ headerSubtitle() }}</span>
       </div>
       <button (click)="reload()" class="icon-button">
@@ -48,30 +49,30 @@ type HoldAction = 'accept' | 'reject';
 
           @if (request.message) {
             <div class="detail-box">
-              <span class="font-label-md text-label-md text-on-surface-variant uppercase">Message</span>
+              <span class="font-label-md text-label-md text-on-surface-variant uppercase">{{ i18n.text('Message') }}</span>
               <p class="font-body-lg text-body-lg text-on-surface m-0 mt-xs">{{ request.message }}</p>
             </div>
           }
 
           <div class="detail-grid">
             <div>
-              <span class="font-label-md text-label-md text-on-surface-variant uppercase">Status</span>
+              <span class="font-label-md text-label-md text-on-surface-variant uppercase">{{ i18n.text('Status') }}</span>
               <p class="font-body-md text-body-md text-on-surface m-0 mt-xs">{{ statusLabel(request.status) }}</p>
             </div>
             <div>
-              <span class="font-label-md text-label-md text-on-surface-variant uppercase">Created</span>
+              <span class="font-label-md text-label-md text-on-surface-variant uppercase">{{ i18n.text('Created') }}</span>
               <p class="font-body-md text-body-md text-on-surface m-0 mt-xs">{{ dateLabel(request.createdAtUtc) }}</p>
             </div>
             @if (request.projectId) {
               <a [routerLink]="['/project', request.projectId]" class="detail-link">
                 <span class="material-symbols-outlined text-[18px]">assignment</span>
-                Open project
+                {{ i18n.text('Open project') }}
               </a>
             }
             @if (request.taskId) {
               <a [routerLink]="['/task', request.taskId]" class="detail-link">
                 <span class="material-symbols-outlined text-[18px]">task_alt</span>
-                Open task
+                {{ i18n.text('Open task') }}
               </a>
             }
           </div>
@@ -79,7 +80,7 @@ type HoldAction = 'accept' | 'reject';
 
         @if (isPending(request)) {
           <section class="hold-panel">
-            <p class="font-label-md text-label-md text-on-surface-variant m-0 text-center">Hold for 2 seconds</p>
+            <p class="font-label-md text-label-md text-on-surface-variant m-0 text-center">{{ i18n.text('Hold for 2 seconds') }}</p>
             <div class="hold-actions" [class.holding]="isHolding(request.id)">
               @if (!isHolding(request.id) || activeAction() === 'accept') {
                 <button
@@ -93,7 +94,7 @@ type HoldAction = 'accept' | 'reject';
                   (pointercancel)="cancelHold()">
                   <span class="hold-fill"></span>
                   <span class="material-symbols-outlined text-[20px]">check</span>
-                  <span>Accept</span>
+                  <span>{{ i18n.text('Accept') }}</span>
                 </button>
               }
               @if (!isHolding(request.id) || activeAction() === 'reject') {
@@ -108,7 +109,7 @@ type HoldAction = 'accept' | 'reject';
                   (pointercancel)="cancelHold()">
                   <span class="hold-fill"></span>
                   <span class="material-symbols-outlined text-[20px]">close</span>
-                  <span>Reject</span>
+                  <span>{{ i18n.text('Reject') }}</span>
                 </button>
               }
             </div>
@@ -117,8 +118,8 @@ type HoldAction = 'accept' | 'reject';
       } @else {
         <section class="bg-theme-surface border border-theme-border rounded-2xl p-md flex items-center justify-between gap-md">
           <div>
-            <h2 class="font-headline-md text-headline-md text-on-surface m-0">{{ pendingRequests().length }} pending</h2>
-            <p class="font-body-md text-body-md text-on-surface-variant m-0 mt-1">Invites and assignment requests sent to you.</p>
+            <h2 class="font-headline-md text-headline-md text-on-surface m-0">{{ pendingLabel() }}</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant m-0 mt-1">{{ i18n.text('Invites and assignment requests sent to you.') }}</p>
           </div>
           <span class="material-symbols-outlined text-theme-blue text-[28px]">notifications</span>
         </section>
@@ -128,7 +129,7 @@ type HoldAction = 'accept' | 'reject';
             <div class="request-icon" [class.project-icon]="typeName(request.type) === 'ProjectInvite'" [class.section-icon]="typeName(request.type) === 'SectionAssignment'">
               <span class="material-symbols-outlined text-[20px]">{{ iconFor(request) }}</span>
             </div>
-            <div class="flex-1 min-w-0 text-left">
+            <div class="flex-1 min-w-0 text-start">
               <p class="font-body-lg text-body-lg text-on-surface m-0 leading-tight truncate">{{ request.title }}</p>
               <p class="font-label-md text-label-md text-on-surface-variant m-0 mt-1">{{ typeLabel(request.type) }} · {{ relativeTime(request.createdAtUtc) }}</p>
               @if (request.message) {
@@ -140,8 +141,8 @@ type HoldAction = 'accept' | 'reject';
         } @empty {
           <section class="bg-theme-surface border border-theme-border rounded-[24px] p-lg text-center">
             <span class="material-symbols-outlined text-theme-blue text-[34px]">inbox</span>
-            <h2 class="font-headline-md text-on-surface mt-sm mb-xs">Inbox is clear</h2>
-            <p class="font-body-md text-on-surface-variant m-0">Project invitations and assignment requests will appear here.</p>
+            <h2 class="font-headline-md text-on-surface mt-sm mb-xs">{{ i18n.text('Inbox is clear') }}</h2>
+            <p class="font-body-md text-on-surface-variant m-0">{{ i18n.text('Project invitations and assignment requests will appear here.') }}</p>
           </section>
         }
       }
@@ -157,13 +158,13 @@ type HoldAction = 'accept' | 'reject';
     .section-icon { background: rgba(255, 192, 0, .13); color: var(--color-theme-orange); }
     .request-detail { background: var(--color-theme-surface); border: 1px solid var(--color-theme-border); border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 18px; }
     .detail-icon { width: 54px; height: 54px; }
-    .detail-pill { display: inline-flex; width: fit-content; border-radius: 999px; padding: 5px 10px; background: var(--color-surface-container-high); color: var(--color-on-surface-variant); font: 700 11px/14px Inter, sans-serif; }
+    .detail-pill { display: inline-flex; width: fit-content; border-radius: 999px; padding: 5px 10px; background: var(--color-surface-container-high); color: var(--color-on-surface-variant); font: 700 11px/14px var(--font-app); }
     .detail-box { border: 1px solid var(--color-theme-border); background: var(--color-surface-container-lowest); border-radius: 18px; padding: 14px; }
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .detail-link { min-height: 46px; border-radius: 16px; background: var(--color-surface-container-high); color: var(--color-on-surface); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font: 700 12px/14px Inter, sans-serif; }
+    .detail-link { min-height: 46px; border-radius: 16px; background: var(--color-surface-container-high); color: var(--color-on-surface); display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font: 700 12px/14px var(--font-app); }
     .hold-panel { position: sticky; bottom: 12px; background: color-mix(in srgb, var(--color-theme-surface) 92%, transparent); border: 1px solid var(--color-theme-border); border-radius: 24px; padding: 14px; display: flex; flex-direction: column; gap: 10px; backdrop-filter: blur(16px); }
     .hold-actions { display: flex; gap: 10px; min-height: 56px; }
-    .hold-button { flex: 1; min-width: 0; border: none; border-radius: 999px; color: var(--color-theme-bg); font: 800 14px/18px Inter, sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; overflow: hidden; transition: flex 220ms ease, transform 180ms ease; touch-action: none; }
+    .hold-button { flex: 1; min-width: 0; border: none; border-radius: 999px; color: var(--color-theme-bg); font: 800 14px/18px var(--font-app); display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; overflow: hidden; transition: flex 220ms ease, transform 180ms ease; touch-action: none; }
     .hold-button > span:not(.hold-fill) { position: relative; z-index: 2; }
     .hold-expanded { flex: 1 0 100%; transform: scale(1.01); }
     .accept-button { background: color-mix(in srgb, var(--color-theme-green) 28%, var(--color-surface-container-high)); }
@@ -180,6 +181,7 @@ type HoldAction = 'accept' | 'reject';
 })
 export class InboxComponent {
   private readonly requests = inject(TaskRequestsService);
+  readonly i18n = inject(I18nService);
   readonly location = inject(Location);
 
   readonly inbox = signal<TaskRequestDto[]>([]);
@@ -243,7 +245,7 @@ export class InboxComponent {
       window.dispatchEvent(new CustomEvent('ido:project-created'));
       window.dispatchEvent(new CustomEvent('ido:task-created'));
     } catch (error) {
-      this.error.set(this.messageFromError(error, 'Could not respond to request.'));
+      this.error.set(this.messageFromError(error, this.i18n.text('Could not respond to request.')));
     } finally {
       this.respondingId.set(null);
       this.cancelHold();
@@ -260,7 +262,15 @@ export class InboxComponent {
 
   headerSubtitle(): string {
     if (this.selectedRequest()) return this.typeLabel(this.selectedRequest()!.type);
-    return `${this.pendingRequests().length} pending requests`;
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.pendingRequests().length)} درخواست در انتظار`
+      : `${this.pendingRequests().length} pending requests`;
+  }
+
+  pendingLabel(): string {
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.pendingRequests().length)} در انتظار`
+      : `${this.pendingRequests().length} pending`;
   }
 
   typeName(type: TaskRequestDto['type']): 'ProjectInvite' | 'SectionAssignment' | 'TaskAssignment' {
@@ -271,16 +281,16 @@ export class InboxComponent {
 
   typeLabel(type: TaskRequestDto['type']): string {
     const name = this.typeName(type);
-    if (name === 'ProjectInvite') return 'Project Invitation';
-    if (name === 'SectionAssignment') return 'Section Assignment';
-    return 'Task Assignment';
+    if (name === 'ProjectInvite') return this.i18n.text('Project Invitation');
+    if (name === 'SectionAssignment') return this.i18n.text('Section Assignment');
+    return this.i18n.text('Task Assignment');
   }
 
   statusLabel(status: TaskRequestDto['status']): string {
-    if (status === 1 || status === 'Accepted') return 'Accepted';
-    if (status === 2 || status === 'Rejected') return 'Rejected';
-    if (status === 3 || status === 'Cancelled') return 'Cancelled';
-    return 'Pending';
+    if (status === 1 || status === 'Accepted') return this.i18n.text('Accepted');
+    if (status === 2 || status === 'Rejected') return this.i18n.text('Rejected');
+    if (status === 3 || status === 'Cancelled') return this.i18n.text('Cancelled');
+    return this.i18n.text('Pending');
   }
 
   iconFor(request: TaskRequestDto): string {
@@ -291,18 +301,11 @@ export class InboxComponent {
   }
 
   relativeTime(value: string): string {
-    const date = new Date(value);
-    const seconds = Math.round((date.getTime() - Date.now()) / 1000);
-    const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-    const ranges: [Intl.RelativeTimeFormatUnit, number][] = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
-    for (const [unit, amount] of ranges) {
-      if (Math.abs(seconds) >= amount) return formatter.format(Math.round(seconds / amount), unit);
-    }
-    return 'just now';
+    return this.i18n.relativeTime(value);
   }
 
   dateLabel(value: string): string {
-    return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return this.i18n.dateTime(value);
   }
 
   private async load(): Promise<void> {
@@ -314,7 +317,7 @@ export class InboxComponent {
       const selected = this.selectedRequest();
       if (selected && !requests.some(request => request.id === selected.id && this.isPending(request))) this.selectedRequest.set(null);
     } catch (error) {
-      this.error.set(this.messageFromError(error, 'Could not load inbox.'));
+      this.error.set(this.messageFromError(error, this.i18n.text('Could not load inbox.')));
     } finally {
       this.isLoading.set(false);
     }

@@ -2,6 +2,7 @@ import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { I18nService } from '../../core/i18n.service';
 import { ProjectDetailsDto, ProjectDto, ProjectMemberStatus, ProjectsService, ProjectStatus } from '../../core/projects.service';
 import { TaskDto } from '../../core/today.service';
 import { CreateNewModalComponent } from '../../shared/create-new-modal/create-new-modal';
@@ -19,7 +20,7 @@ interface ProjectListItem {
   template: `
     <header class="flex justify-between items-center px-margin-mobile py-md w-full sticky top-0 bg-theme-bg/95 backdrop-blur-md z-40">
       <div class="min-w-0">
-        <h1 class="font-headline-lg-mobile text-headline-lg-mobile m-0 leading-tight text-on-surface">Projects</h1>
+        <h1 class="font-headline-lg-mobile text-headline-lg-mobile m-0 leading-tight text-on-surface">{{ i18n.text('Projects') }}</h1>
         <p class="font-body-md text-body-md text-on-surface-variant m-0 mt-0.5">{{ headerSubtitle() }}</p>
       </div>
       <div class="flex gap-sm shrink-0">
@@ -38,13 +39,13 @@ interface ProjectListItem {
     <div class="px-margin-mobile flex flex-col gap-lg pb-md">
       @if (isSearchOpen()) {
         <section class="relative">
-          <span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[22px]">search</span>
+          <span class="material-symbols-outlined absolute start-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[22px]">search</span>
           <input
             [value]="searchTerm()"
             (input)="searchTerm.set(inputValue($event))"
             type="search"
-            placeholder="Search projects"
-            class="w-full h-[48px] bg-theme-surface border border-theme-border rounded-full pl-[48px] pr-md text-body-lg font-body-lg text-on-surface placeholder:text-on-surface-variant focus:ring-1 focus:ring-theme-project-accent focus:outline-none" />
+            [placeholder]="i18n.text('Search projects')"
+            class="w-full h-[48px] bg-theme-surface border border-theme-border rounded-full ps-[48px] pe-md text-body-lg font-body-lg text-on-surface placeholder:text-on-surface-variant focus:ring-1 focus:ring-theme-project-accent focus:outline-none" />
         </section>
       }
 
@@ -52,23 +53,23 @@ interface ProjectListItem {
         <div class="absolute -right-12 -top-12 w-36 h-36 bg-theme-project-accent/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="flex justify-between items-start gap-lg relative z-10">
           <div class="min-w-0">
-            <h2 class="font-headline-md text-headline-md m-0 text-on-surface">Project Portfolio</h2>
-            <p class="font-body-md text-body-md text-on-surface-variant m-0 mt-1">{{ doneTasks() }} of {{ totalTasks() }} tasks completed</p>
+            <h2 class="font-headline-md text-headline-md m-0 text-on-surface">{{ i18n.text('Project Portfolio') }}</h2>
+            <p class="font-body-md text-body-md text-on-surface-variant m-0 mt-1">{{ portfolioCompletionLabel() }}</p>
 
             <div class="flex gap-sm mt-md pt-xs items-center">
               <div class="flex flex-col">
                 <span class="font-headline-lg-mobile text-headline-lg-mobile text-theme-project-accent">{{ activeCount() }}</span>
-                <span class="font-label-md text-label-md text-on-surface-variant">Active</span>
+                <span class="font-label-md text-label-md text-on-surface-variant">{{ i18n.text('Active') }}</span>
               </div>
               <div class="w-px h-8 bg-theme-border"></div>
               <div class="flex flex-col">
                 <span class="font-headline-lg-mobile text-headline-lg-mobile text-theme-green">{{ completedCount() }}</span>
-                <span class="font-label-md text-label-md text-on-surface-variant">Done</span>
+                <span class="font-label-md text-label-md text-on-surface-variant">{{ i18n.text('Done') }}</span>
               </div>
               <div class="w-px h-8 bg-theme-border"></div>
               <div class="flex flex-col">
                 <span class="font-headline-lg-mobile text-headline-lg-mobile text-theme-blue">{{ memberCount() }}</span>
-                <span class="font-label-md text-label-md text-on-surface-variant">Members</span>
+                <span class="font-label-md text-label-md text-on-surface-variant">{{ i18n.text('Members') }}</span>
               </div>
             </div>
           </div>
@@ -113,7 +114,7 @@ interface ProjectListItem {
             [class.bg-theme-project-bg]="filter() === item.value"
             [class.text-theme-project-accent]="filter() === item.value"
             [class.text-on-surface-variant]="filter() !== item.value">
-            {{ item.label }} {{ filterCount(item.value) }}
+            {{ i18n.text(item.label) }} {{ filterCount(item.value) }}
           </button>
         }
       </section>
@@ -127,7 +128,7 @@ interface ProjectListItem {
       <section class="flex flex-col gap-md">
         <div class="flex justify-between items-center gap-md">
           <h3 class="font-headline-md text-headline-md m-0 text-on-surface">{{ listTitle() }}</h3>
-          <span class="font-label-md text-label-md text-on-surface-variant">{{ filteredProjects().length }} shown</span>
+          <span class="font-label-md text-label-md text-on-surface-variant">{{ shownLabel(filteredProjects().length) }}</span>
         </div>
 
         <div class="flex flex-col gap-sm">
@@ -159,7 +160,7 @@ interface ProjectListItem {
 
                 <div>
                   <div class="flex justify-between items-center mb-xs">
-                    <span class="font-label-md text-label-md" [style.color]="statusColor(item)">{{ statusLabel(item.project.status) }}</span>
+                    <span class="font-label-md text-label-md" [style.color]="statusColor(item)">{{ statusDisplayLabel(item.project.status) }}</span>
                     <span class="font-label-md text-label-md text-on-surface-variant">{{ projectProgress(item) }}%</span>
                   </div>
                   <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
@@ -205,11 +206,11 @@ interface ProjectListItem {
             <span class="material-symbols-outlined text-[20px]">add_task</span>
           </div>
           <div class="min-w-0">
-            <p class="font-label-md text-label-md text-theme-project-accent mb-0.5 mt-0">New workspace</p>
-            <p class="font-body-md text-body-md text-on-surface m-0 leading-tight">Use the bottom plus button here to add a project.</p>
+            <p class="font-label-md text-label-md text-theme-project-accent mb-0.5 mt-0">{{ i18n.text('New workspace') }}</p>
+            <p class="font-body-md text-body-md text-on-surface m-0 leading-tight">{{ i18n.text('Use the bottom plus button here to add a project.') }}</p>
           </div>
         </div>
-        <button type="button" (click)="openCreateProject()" class="bg-theme-project-accent/20 text-theme-project-accent font-label-md text-label-md px-md py-2 rounded-full hover:bg-theme-project-accent/30 transition-colors shrink-0 border-none outline-none">Create</button>
+        <button type="button" (click)="openCreateProject()" class="bg-theme-project-accent/20 text-theme-project-accent font-label-md text-label-md px-md py-2 rounded-full hover:bg-theme-project-accent/30 transition-colors shrink-0 border-none outline-none">{{ i18n.text('Create') }}</button>
       </section>
     </div>
 
@@ -221,6 +222,7 @@ interface ProjectListItem {
 export class ProjectsComponent implements OnDestroy {
   private readonly projectsService = inject(ProjectsService);
   private readonly auth = inject(AuthService);
+  readonly i18n = inject(I18nService);
   private readonly projectCreatedHandler = () => void this.load();
 
   readonly projects = signal<ProjectListItem[]>([]);
@@ -258,10 +260,10 @@ export class ProjectsComponent implements OnDestroy {
     return Math.round(items.reduce((sum, item) => sum + this.projectProgress(item), 0) / items.length);
   });
   readonly quickStats = computed(() => [
-    { label: 'Owned', value: this.projects().filter(item => this.isOwned(item.project)).length, icon: 'verified_user', color: '#B072FF' },
-    { label: 'Shared', value: this.sharedCount(), icon: 'group', color: '#3EAEFF' },
-    { label: 'Archived', value: this.archivedCount(), icon: 'inventory_2', color: '#FFC000' },
-    { label: 'Tasks', value: this.totalTasks(), icon: 'task_alt', color: '#00F4B9' }
+    { label: this.i18n.text('Owned'), value: this.projects().filter(item => this.isOwned(item.project)).length, icon: 'verified_user', color: '#B072FF' },
+    { label: this.i18n.text('Shared'), value: this.sharedCount(), icon: 'group', color: '#3EAEFF' },
+    { label: this.i18n.text('Archived'), value: this.archivedCount(), icon: 'inventory_2', color: '#FFC000' },
+    { label: this.i18n.text('Tasks'), value: this.totalTasks(), icon: 'task_alt', color: '#00F4B9' }
   ]);
 
   constructor() {
@@ -293,26 +295,38 @@ export class ProjectsComponent implements OnDestroy {
   listTitle(): string {
     switch (this.filter()) {
       case 'owned':
-        return 'Owned Projects';
+        return this.i18n.text('Owned Projects');
       case 'shared':
-        return 'Shared Projects';
+        return this.i18n.text('Shared Projects');
       case 'archived':
-        return 'Archived Projects';
+        return this.i18n.text('Archived Projects');
       case 'all':
-        return 'My Projects';
+        return this.i18n.text('My Projects');
     }
   }
 
   headerSubtitle(): string {
-    if (this.isLoading()) return 'Loading your workspaces';
-    return `${this.activeCount()} active, ${this.doneTasks()} tasks done`;
+    if (this.isLoading()) return this.i18n.text('Loading your workspaces');
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.activeCount())} فعال، ${this.i18n.number(this.doneTasks())} تسک انجام شده`
+      : `${this.activeCount()} active, ${this.doneTasks()} tasks done`;
   }
 
   emptyMessage(): string {
-    if (this.searchTerm().trim()) return 'No projects match your search.';
-    if (this.filter() === 'archived') return 'No archived projects yet.';
-    if (this.filter() === 'shared') return 'No shared projects yet.';
-    return 'Create your first project to organize related tasks.';
+    if (this.searchTerm().trim()) return this.i18n.text('No projects match your search.');
+    if (this.filter() === 'archived') return this.i18n.text('No archived projects yet.');
+    if (this.filter() === 'shared') return this.i18n.text('No shared projects yet.');
+    return this.i18n.text('Create your first project to organize related tasks.');
+  }
+
+  portfolioCompletionLabel(): string {
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(this.doneTasks())} از ${this.i18n.number(this.totalTasks())} تسک تکمیل شده`
+      : `${this.doneTasks()} of ${this.totalTasks()} tasks completed`;
+  }
+
+  shownLabel(count: number): string {
+    return this.i18n.language() === 'fa' ? `${this.i18n.number(count)} نمایش` : `${count} shown`;
   }
 
   isFeatured(item: ProjectListItem): boolean {
@@ -322,8 +336,10 @@ export class ProjectsComponent implements OnDestroy {
   projectFallback(item: ProjectListItem): string {
     const tasks = this.taskCount(item);
     const sections = this.sectionCount(item);
-    if (tasks === 0 && sections === 0) return 'Ready for tasks and sections';
-    return `${tasks} task${tasks === 1 ? '' : 's'} across ${sections} section${sections === 1 ? '' : 's'}`;
+    if (tasks === 0 && sections === 0) return this.i18n.text('Ready for tasks and sections');
+    return this.i18n.language() === 'fa'
+      ? `${this.i18n.number(tasks)} تسک در ${this.i18n.number(sections)} بخش`
+      : `${tasks} task${tasks === 1 ? '' : 's'} across ${sections} section${sections === 1 ? '' : 's'}`;
   }
 
   projectProgress(item: ProjectListItem): number {
@@ -349,6 +365,10 @@ export class ProjectsComponent implements OnDestroy {
     if (status === 1 || status === 'Completed') return 'Completed';
     if (status === 2 || status === 'Archived') return 'Archived';
     return 'Active';
+  }
+
+  statusDisplayLabel(status: ProjectStatus): string {
+    return this.i18n.text(this.statusLabel(status));
   }
 
   visibleMembers(item: ProjectListItem) {
@@ -446,6 +466,6 @@ export class ProjectsComponent implements OnDestroy {
       if (body?.error) return body.error;
     }
 
-    return fallback;
+    return this.i18n.text(fallback);
   }
 }
