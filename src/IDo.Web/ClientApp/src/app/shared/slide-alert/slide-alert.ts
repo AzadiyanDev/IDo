@@ -1,4 +1,5 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
+import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-slide-alert',
@@ -10,12 +11,12 @@ import { Component, input, output } from '@angular/core';
             <span class="material-symbols-outlined text-[20px]">{{ icon() }}</span>
           </div>
           <div class="min-w-0 flex-1">
-            <p class="m-0 text-body-md font-body-md text-on-surface font-semibold leading-tight">{{ title() }}</p>
-            <p class="m-0 mt-0.5 text-label-md font-label-md text-on-surface-variant leading-tight truncate">{{ message() }}</p>
+            <p class="m-0 text-body-md font-body-md text-on-surface font-semibold leading-tight">{{ i18n.text(title()) }}</p>
+            <p class="m-0 mt-0.5 text-label-md font-label-md text-on-surface-variant leading-tight truncate">{{ i18n.text(message()) }}</p>
           </div>
           @if (actionText()) {
             <button type="button" (click)="actionClicked.emit()" class="px-sm py-1.5 rounded-full bg-theme-purple-bright/15 text-theme-purple-bright text-label-md font-label-md hover:bg-theme-purple-bright/25 transition-colors shrink-0">
-              {{ actionText() }}
+              {{ i18n.text(actionText()) }}
             </button>
           }
         </div>
@@ -44,6 +45,7 @@ import { Component, input, output } from '@angular/core';
   `]
 })
 export class SlideAlertComponent {
+  readonly i18n = inject(I18nService);
   open = input(false);
   icon = input('person_add');
   title = input('Notification');

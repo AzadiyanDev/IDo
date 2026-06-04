@@ -1,8 +1,11 @@
-import { Component, OnDestroy, input, signal, output } from '@angular/core';
+import { Component, OnDestroy, computed, inject, input, signal, output } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { CalendarService } from '../../core/calendar.service';
 import { TasksService } from '../../core/tasks.service';
 import { HabitScheduleType, HabitsService } from '../../core/habits.service';
 import { ProjectsService } from '../../core/projects.service';
+import { I18nService } from '../../core/i18n.service';
+import { CalendarDatePickerComponent } from '../calendar/calendar-date-picker';
 import { LoadingModalComponent } from '../loading-modal/loading-modal';
 import { PROJECT_COLOR_OPTIONS, PROJECT_ICON_OPTIONS } from '../project-icon-options';
 
@@ -10,7 +13,7 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
 
 @Component({
   selector: 'app-create-new-modal',
-  imports: [LoadingModalComponent],
+  imports: [LoadingModalComponent, CalendarDatePickerComponent],
   template: `
     <div
       class="fixed inset-0 bg-black/45 backdrop-blur-sm z-[90] transition-opacity flex items-end justify-center"
@@ -32,7 +35,7 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
         <button
           type="button"
           class="w-full flex justify-center pt-sm pb-xs cursor-grab active:cursor-grabbing border-none bg-transparent touch-none"
-          aria-label="Expand create modal"
+          [attr.aria-label]="i18n.text('Expand create modal')"
           (click)="toggleExpanded()"
           (pointerdown)="startDrag($event)">
           <div class="w-[60px] h-1.5 bg-outline-variant rounded-full opacity-60"></div>
@@ -61,21 +64,21 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
               required />
 
             <div class="relative">
-              <span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[25px]">notes</span>
+              <span class="material-symbols-outlined absolute start-md top-1/2 -translate-y-1/2 text-on-surface-variant text-[25px]">notes</span>
               <input
                 [value]="description()"
                 (input)="description.set(inputValue($event))"
                 type="text"
                 [placeholder]="descriptionPlaceholder()"
-                class="w-full h-[48px] bg-surface-container-lowest border-none rounded-full pl-[54px] pr-lg text-body-lg font-body-lg text-on-surface placeholder:text-on-surface-variant focus:ring-1 focus:ring-primary focus:outline-none transition-all" />
+                class="w-full h-[48px] bg-surface-container-lowest border-none rounded-full ps-[54px] pe-lg text-body-lg font-body-lg text-on-surface placeholder:text-on-surface-variant focus:ring-1 focus:ring-primary focus:outline-none transition-all" />
             </div>
           </div>
 
           @if (mode() === 'habit') {
             <div class="flex flex-col gap-sm">
-              <span class="text-label-md font-label-md text-on-surface-variant uppercase">Active days</span>
+              <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Active days') }}</span>
               <div class="grid grid-cols-7 gap-xs">
-                @for (day of weekDays; track day.value) {
+                @for (day of weekDays(); track day.value) {
                   <button
                     type="button"
                     (click)="toggleHabitDay(day.value)"
@@ -91,7 +94,7 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
             </div>
 
             <div class="flex flex-col gap-sm">
-              <span class="text-label-md font-label-md text-on-surface-variant uppercase">Icon</span>
+              <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Icon') }}</span>
               <div class="flex gap-xs overflow-x-auto hide-scrollbar">
                 @for (icon of habitIcons; track icon) {
                   <button
@@ -109,7 +112,7 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
             </div>
           } @else if (mode() === 'project') {
             <div class="flex flex-col gap-sm">
-              <span class="text-label-md font-label-md text-on-surface-variant uppercase">Project icon</span>
+              <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Project icon') }}</span>
               <div class="grid grid-cols-6 gap-xs max-h-[156px] overflow-y-auto hide-scrollbar pr-1">
                 @for (icon of projectIcons; track icon) {
                   <button
@@ -129,7 +132,7 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
             </div>
 
             <div class="flex flex-col gap-sm">
-              <span class="text-label-md font-label-md text-on-surface-variant uppercase">Accent</span>
+              <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Accent') }}</span>
               <div class="grid grid-cols-5 gap-xs">
                 @for (color of projectColors; track color.value) {
                   <button
@@ -148,47 +151,43 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
             </div>
           } @else {
             <div class="flex flex-col gap-sm">
-              <span class="text-label-md font-label-md text-on-surface-variant uppercase">Date</span>
+              <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Date') }}</span>
               <div class="flex flex-wrap gap-xs">
                 <button type="button" (click)="setToday()" class="px-md py-3 rounded-full text-body-md font-body-md font-semibold transition-colors"
                   [class.bg-primary-container]="isTodaySelected()"
                   [class.text-on-primary-container]="isTodaySelected()"
                   [class.bg-surface-container-highest]="!isTodaySelected()"
                   [class.text-on-surface]="!isTodaySelected()">
-                  Today
+                  {{ i18n.text('Today') }}
                 </button>
                 <button type="button" (click)="setTomorrow()" class="px-md py-3 rounded-full text-body-md font-body-md font-semibold transition-colors"
                   [class.bg-primary-container]="isTomorrowSelected()"
                   [class.text-on-primary-container]="isTomorrowSelected()"
                   [class.bg-surface-container-highest]="!isTomorrowSelected()"
                   [class.text-on-surface]="!isTomorrowSelected()">
-                  Tomorrow
+                  {{ i18n.text('Tomorrow') }}
                 </button>
                 <button type="button" (click)="showDatePicker.set(!showDatePicker())" class="px-md py-3 rounded-full bg-surface-container-highest text-on-surface text-body-md font-body-md font-semibold flex items-center gap-xs hover:bg-surface-variant transition-colors">
                   <span class="material-symbols-outlined text-[22px]">calendar_month</span>
-                  Pick Date
+                  {{ dueDateLabel() }}
                 </button>
               </div>
               @if (showDatePicker()) {
-                <input
-                  [value]="dueDate()"
-                  (input)="dueDate.set(inputValue($event))"
-                  type="date"
-                  class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-full px-md py-sm text-body-md font-body-md text-on-surface focus:ring-1 focus:ring-primary focus:outline-none transition-all" />
+                <app-calendar-date-picker [selectedDate]="dueDate()" (selectedDateChange)="setDueDate($event)" />
               }
             </div>
           }
 
           @if (mode() !== 'project') {
             <div class="flex flex-col gap-sm">
-              <span class="text-label-md font-label-md text-on-surface-variant uppercase">Reminder</span>
+              <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Reminder') }}</span>
               <div class="flex flex-wrap gap-xs">
                 <button type="button" (click)="setReminder('')" class="px-md py-3 rounded-full text-body-md font-body-md font-semibold transition-colors"
                   [class.bg-primary-container]="!selectedReminder()"
                   [class.text-on-primary-container]="!selectedReminder()"
                   [class.bg-surface-container-highest]="selectedReminder()"
                   [class.text-on-surface]="selectedReminder()">
-                  No reminder
+                  {{ i18n.text('No reminder') }}
                 </button>
                 <button type="button" (click)="setReminder('10:00')" class="px-md py-3 rounded-full text-body-md font-body-md font-semibold transition-colors"
                   [class.bg-primary-container]="selectedReminder() === '10:00'"
@@ -254,12 +253,15 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
   `]
 })
 export class CreateNewModalComponent implements OnDestroy {
+  private readonly calendar = inject(CalendarService);
+  readonly i18n = inject(I18nService);
+
   mode = input<CreateNewMode>('task');
   closeClicked = output<void>();
   created = output<void>();
   title = signal('');
   description = signal('');
-  dueDate = signal(new Date().toISOString().slice(0, 10));
+  dueDate = signal(this.calendar.selectedTaskDate());
   dueTime = signal('');
   habitReminderTime = signal('');
   habitIcon = signal('repeat');
@@ -273,19 +275,30 @@ export class CreateNewModalComponent implements OnDestroy {
   isCountable = signal(true);
   isSubmitting = signal(false);
   error = signal<string | null>(null);
+  readonly dueDateLabel = computed(() => this.calendar.formatShortDateKey(this.dueDate()));
   private dragStartY: number | null = null;
   private dragStartHeight: number | null = null;
   private readonly collapsedHeight = 535;
   private didDrag = false;
-  readonly weekDays = [
-    { value: 1, label: 'M' },
-    { value: 2, label: 'T' },
-    { value: 3, label: 'W' },
-    { value: 4, label: 'T' },
-    { value: 5, label: 'F' },
-    { value: 6, label: 'S' },
-    { value: 0, label: 'S' }
-  ];
+  readonly weekDays = computed(() => this.calendar.calendarType() === 'Jalali' || this.i18n.language() === 'fa'
+    ? [
+        { value: 6, label: 'ش' },
+        { value: 0, label: 'ی' },
+        { value: 1, label: 'د' },
+        { value: 2, label: 'س' },
+        { value: 3, label: 'چ' },
+        { value: 4, label: 'پ' },
+        { value: 5, label: 'ج' }
+      ]
+    : [
+        { value: 1, label: 'M' },
+        { value: 2, label: 'T' },
+        { value: 3, label: 'W' },
+        { value: 4, label: 'T' },
+        { value: 5, label: 'F' },
+        { value: 6, label: 'S' },
+        { value: 0, label: 'S' }
+      ]);
   readonly habitIcons = ['repeat', 'menu_book', 'fitness_center', 'water_drop', 'self_improvement', 'bedtime', 'restaurant', 'directions_run'];
   readonly projectIcons = PROJECT_ICON_OPTIONS;
   readonly projectColors = PROJECT_COLOR_OPTIONS;
@@ -311,12 +324,12 @@ export class CreateNewModalComponent implements OnDestroy {
     event?.preventDefault();
     if (this.isSubmitting()) return;
     if (!this.title().trim()) {
-      this.error.set(`${this.entityName()} title is required.`);
+      this.error.set(this.i18n.text(`${this.entityName()} title is required.`));
       return;
     }
 
     if (this.mode() === 'habit' && this.activeDays().length === 0) {
-      this.error.set('Select at least one active day.');
+      this.error.set(this.i18n.text('Select at least one active day.'));
       return;
     }
 
@@ -346,7 +359,7 @@ export class CreateNewModalComponent implements OnDestroy {
         });
         window.dispatchEvent(new CustomEvent('ido:project-created'));
       } else {
-        await this.tasks.createPersonalTask({
+        const task = await this.tasks.createPersonalTask({
           title: this.title().trim(),
           description: this.description().trim() || null,
           color: null,
@@ -361,7 +374,9 @@ export class CreateNewModalComponent implements OnDestroy {
           priority: null,
           isCountableInProgress: this.isCountable()
         });
-        window.dispatchEvent(new CustomEvent('ido:task-created'));
+        const dueDate = task.dueDate ?? this.dueDate();
+        this.calendar.setSelectedTaskDate(dueDate);
+        window.dispatchEvent(new CustomEvent('ido:task-created', { detail: { dueDate } }));
       }
       this.created.emit();
       this.closeClicked.emit();
@@ -385,44 +400,44 @@ export class CreateNewModalComponent implements OnDestroy {
   }
 
   modalTitle(): string {
-    if (this.mode() === 'habit') return 'Create Habit';
-    if (this.mode() === 'project') return 'Create Project';
-    return 'Create New';
+    if (this.mode() === 'habit') return this.i18n.text('Create Habit');
+    if (this.mode() === 'project') return this.i18n.text('Create Project');
+    return this.i18n.text('Create New');
   }
 
   modalSubtitle(): string {
-    if (this.mode() === 'habit') return 'Add a repeatable routine';
-    if (this.mode() === 'project') return 'Start a project workspace';
-    return 'Add a task for today';
+    if (this.mode() === 'habit') return this.i18n.text('Add a repeatable routine');
+    if (this.mode() === 'project') return this.i18n.text('Start a project workspace');
+    return this.i18n.text('Add a task for today');
   }
 
   titlePlaceholder(): string {
-    if (this.mode() === 'habit') return 'What routine do you want to build?';
-    if (this.mode() === 'project') return 'What project are you starting?';
-    return 'What do you need to do?';
+    if (this.mode() === 'habit') return this.i18n.text('What routine do you want to build?');
+    if (this.mode() === 'project') return this.i18n.text('What project are you starting?');
+    return this.i18n.text('What do you need to do?');
   }
 
   descriptionPlaceholder(): string {
-    if (this.mode() === 'project') return 'Project brief (optional)';
-    return 'Description (optional)';
+    if (this.mode() === 'project') return this.i18n.text('Project brief (optional)');
+    return this.i18n.text('Description (optional)');
   }
 
   submitLabel(): string {
-    if (this.mode() === 'habit') return 'Create Habit';
-    if (this.mode() === 'project') return 'Create Project';
-    return 'Create Task';
+    if (this.mode() === 'habit') return this.i18n.text('Create Habit');
+    if (this.mode() === 'project') return this.i18n.text('Create Project');
+    return this.i18n.text('Create Task');
   }
 
   loadingTitle(): string {
-    if (this.mode() === 'habit') return 'Creating habit';
-    if (this.mode() === 'project') return 'Creating project';
-    return 'Creating todo';
+    if (this.mode() === 'habit') return this.i18n.text('Creating habit');
+    if (this.mode() === 'project') return this.i18n.text('Creating project');
+    return this.i18n.text('Creating todo');
   }
 
   loadingMessage(): string {
-    if (this.mode() === 'habit') return 'Adding it to your routines';
-    if (this.mode() === 'project') return 'Preparing the workspace';
-    return 'Adding it to today';
+    if (this.mode() === 'habit') return this.i18n.text('Adding it to your routines');
+    if (this.mode() === 'project') return this.i18n.text('Preparing the workspace');
+    return this.i18n.text('Adding it to today');
   }
 
   setReminder(value: string): void {
@@ -498,25 +513,27 @@ export class CreateNewModalComponent implements OnDestroy {
   }
 
   setToday(): void {
-    this.dueDate.set(this.formatDate(new Date()));
+    this.dueDate.set(this.calendar.todayKey());
     this.showDatePicker.set(false);
   }
 
   setTomorrow(): void {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    this.dueDate.set(this.formatDate(tomorrow));
+    const tomorrow = this.calendar.addDays(new Date(), 1);
+    this.dueDate.set(this.calendar.formatDateKey(tomorrow));
     this.showDatePicker.set(false);
   }
 
+  setDueDate(date: string): void {
+    this.dueDate.set(date);
+  }
+
   isTodaySelected(): boolean {
-    return this.dueDate() === this.formatDate(new Date());
+    return this.dueDate() === this.calendar.todayKey();
   }
 
   isTomorrowSelected(): boolean {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return this.dueDate() === this.formatDate(tomorrow);
+    const tomorrow = this.calendar.addDays(new Date(), 1);
+    return this.dueDate() === this.calendar.formatDateKey(tomorrow);
   }
 
   private messageFromError(error: unknown): string {
@@ -526,20 +543,13 @@ export class CreateNewModalComponent implements OnDestroy {
       if (body?.error) return body.error;
     }
 
-    return `Could not create ${this.entityName().toLowerCase()}.`;
+    return this.i18n.text(`Could not create ${this.entityName().toLowerCase()}.`);
   }
 
   private entityName(): string {
     if (this.mode() === 'habit') return 'Habit';
     if (this.mode() === 'project') return 'Project';
     return 'Task';
-  }
-
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 
   private toTimeOnly(value: string): string | null {

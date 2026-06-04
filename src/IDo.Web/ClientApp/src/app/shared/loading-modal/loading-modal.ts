@@ -1,4 +1,5 @@
-import { Component, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
+import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-loading-modal',
@@ -17,8 +18,8 @@ import { Component, input } from '@angular/core';
           </div>
 
           <div class="text-center flex flex-col gap-xs">
-            <h2 class="m-0 text-headline-md font-headline-md text-on-surface">{{ title() }}</h2>
-            <p class="m-0 text-body-md font-body-md text-on-surface-variant">{{ message() }}</p>
+            <h2 class="m-0 text-headline-md font-headline-md text-on-surface">{{ i18n.text(title()) }}</h2>
+            <p class="m-0 text-body-md font-body-md text-on-surface-variant">{{ i18n.text(message()) }}</p>
           </div>
         </div>
       </div>
@@ -58,6 +59,7 @@ import { Component, input } from '@angular/core';
   `]
 })
 export class LoadingModalComponent {
+  readonly i18n = inject(I18nService);
   open = input(false);
   title = input('Please wait');
   message = input('Working on your request');
