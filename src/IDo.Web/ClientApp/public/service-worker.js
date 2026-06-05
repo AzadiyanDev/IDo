@@ -1,7 +1,8 @@
-const CACHE_NAME = 'ido-pwa-v1';
+const CACHE_NAME = 'ido-pwa-v20260605-session-update';
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/version.json',
   '/manifest.webmanifest',
   '/icons/ido-icon-192.png',
   '/icons/ido-icon-512.png'
@@ -32,10 +33,22 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/hubs/')) return;
+  if (url.pathname === '/service-worker.js' || url.pathname === '/version.json') {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          }
+
+          return response;
+        })
         .catch(() => caches.match('/index.html'))
     );
     return;

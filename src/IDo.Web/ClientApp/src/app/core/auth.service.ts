@@ -65,8 +65,11 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    await firstValueFrom(this.http.post<void>('/api/auth/logout', {}, { withCredentials: true }));
-    this.setUser(null);
+    try {
+      await firstValueFrom(this.http.post<void>('/api/auth/logout', {}, { withCredentials: true }));
+    } finally {
+      this.clearLocalSession();
+    }
   }
 
   async getProfile(): Promise<UserProfile> {
@@ -75,7 +78,7 @@ export class AuthService {
 
   async updateProfile(profile: UserProfile): Promise<UserProfile> {
     const updatedProfile = await firstValueFrom(
-      this.http.put<UserProfile>('/api/profile', profile, { withCredentials: true })
+      this.http.post<UserProfile>('/api/profile', profile, { withCredentials: true })
     );
     this.mergeProfile(updatedProfile);
     return updatedProfile;
@@ -93,7 +96,7 @@ export class AuthService {
 
   async updateSettings(settings: UserSettings): Promise<UserProfile> {
     const updatedProfile = await firstValueFrom(
-      this.http.put<UserProfile>('/api/profile/settings', settings, { withCredentials: true })
+      this.http.post<UserProfile>('/api/profile/settings', settings, { withCredentials: true })
     );
     this.mergeProfile(updatedProfile);
     return updatedProfile;
@@ -101,10 +104,14 @@ export class AuthService {
 
   async updateAccount(request: UpdateUserProfileRequest): Promise<AuthUser> {
     const user = await firstValueFrom(
-      this.http.put<AuthUser>('/api/profile/account', request, { withCredentials: true })
+      this.http.post<AuthUser>('/api/profile/account', request, { withCredentials: true })
     );
     this.setUser(user);
     return user;
+  }
+
+  clearLocalSession(): void {
+    this.setUser(null);
   }
 
   private setUser(user: AuthUser | null): void {

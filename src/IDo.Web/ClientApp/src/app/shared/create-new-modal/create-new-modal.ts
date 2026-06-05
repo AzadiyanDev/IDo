@@ -7,7 +7,7 @@ import { ProjectsService } from '../../core/projects.service';
 import { I18nService } from '../../core/i18n.service';
 import { CalendarDatePickerComponent } from '../calendar/calendar-date-picker';
 import { LoadingModalComponent } from '../loading-modal/loading-modal';
-import { PROJECT_COLOR_OPTIONS, PROJECT_ICON_OPTIONS } from '../project-icon-options';
+import { HABIT_ICON_OPTIONS, PROJECT_COLOR_OPTIONS, PROJECT_ICON_OPTIONS } from '../project-icon-options';
 
 export type CreateNewMode = 'task' | 'habit' | 'project';
 
@@ -95,14 +95,16 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
 
             <div class="flex flex-col gap-sm">
               <span class="text-label-md font-label-md text-on-surface-variant uppercase">{{ i18n.text('Icon') }}</span>
-              <div class="flex gap-xs overflow-x-auto hide-scrollbar">
+              <div class="grid grid-cols-6 gap-xs max-h-[156px] overflow-y-auto hide-scrollbar pr-1">
                 @for (icon of habitIcons; track icon) {
                   <button
                     type="button"
                     (click)="habitIcon.set(icon)"
-                    class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors"
-                    [class.bg-secondary-container]="habitIcon() === icon"
-                    [class.text-on-secondary-container]="habitIcon() === icon"
+                    class="w-11 h-11 rounded-full flex items-center justify-center transition-colors"
+                    [class.bg-theme-habit-bg]="habitIcon() === icon"
+                    [class.text-theme-habit-accent]="habitIcon() === icon"
+                    [class.border]="habitIcon() === icon"
+                    [class.border-theme-habit-accent]="habitIcon() === icon"
                     [class.bg-surface-container-highest]="habitIcon() !== icon"
                     [class.text-on-surface]="habitIcon() !== icon">
                     <span class="material-symbols-outlined">{{ icon }}</span>
@@ -299,7 +301,7 @@ export class CreateNewModalComponent implements OnDestroy {
         { value: 6, label: 'S' },
         { value: 0, label: 'S' }
       ]);
-  readonly habitIcons = ['repeat', 'menu_book', 'fitness_center', 'water_drop', 'self_improvement', 'bedtime', 'restaurant', 'directions_run'];
+  readonly habitIcons = HABIT_ICON_OPTIONS;
   readonly projectIcons = PROJECT_ICON_OPTIONS;
   readonly projectColors = PROJECT_COLOR_OPTIONS;
   private readonly allDayValues = [0, 1, 2, 3, 4, 5, 6];

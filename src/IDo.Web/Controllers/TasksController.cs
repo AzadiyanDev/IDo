@@ -29,7 +29,7 @@ public sealed class TasksController(ICurrentUserService currentUser, ITaskServic
         return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateTaskRequest request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
@@ -62,7 +62,7 @@ public sealed class TasksController(ICurrentUserService currentUser, ITaskServic
         return NoContent();
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpPost("{id:guid}/delete")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();

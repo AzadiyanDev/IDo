@@ -59,17 +59,28 @@ var webRoot = app.Environment.WebRootPath ?? Path.Combine(app.Environment.Conten
 var angularBrowserRoot = Path.Combine(webRoot, "browser");
 var staticContentTypes = new FileExtensionContentTypeProvider();
 staticContentTypes.Mappings[".webmanifest"] = "application/manifest+json";
+static void SetNoCacheForVersionedEntryPoints(StaticFileResponseContext context)
+{
+    var fileName = Path.GetFileName(context.File.PhysicalPath);
+    if (fileName is "index.html" or "service-worker.js" or "version.json")
+    {
+        context.Context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+        context.Context.Response.Headers.Pragma = "no-cache";
+        context.Context.Response.Headers.Expires = "0";
+    }
+}
+
 if (Directory.Exists(angularBrowserRoot))
 {
     var angularFiles = new PhysicalFileProvider(angularBrowserRoot);
     app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = angularFiles });
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = angularFiles, ContentTypeProvider = staticContentTypes });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = angularFiles, ContentTypeProvider = staticContentTypes, OnPrepareResponse = SetNoCacheForVersionedEntryPoints });
 }
 else
 {
     app.UseDefaultFiles();
 }
-app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticContentTypes });
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticContentTypes, OnPrepareResponse = SetNoCacheForVersionedEntryPoints });
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<TaskHub>("/hubs/tasks");

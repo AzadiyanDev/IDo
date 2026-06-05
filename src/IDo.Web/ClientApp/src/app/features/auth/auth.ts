@@ -111,9 +111,7 @@ export class AuthComponent implements OnDestroy {
       this.error.set(null);
     });
 
-    if (this.auth.isSignedIn()) {
-      void this.router.navigateByUrl('/today');
-    }
+    this.auth.clearLocalSession();
   }
 
   ngOnDestroy(): void {

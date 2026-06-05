@@ -4,13 +4,12 @@ import { CalendarService } from '../../core/calendar.service';
 import { I18nService } from '../../core/i18n.service';
 import { HabitDto, HabitsService } from '../../core/habits.service';
 import { TodayDashboardDto, TodayService } from '../../core/today.service';
-import { CreateNewModalComponent } from '../../shared/create-new-modal/create-new-modal';
 
 type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
 
 @Component({
   selector: 'app-habits',
-  imports: [CreateNewModalComponent],
+  imports: [],
   template: `
     <header class="w-full top-0 sticky bg-theme-bg z-40 py-md">
       <div class="px-margin-mobile flex items-center justify-between">
@@ -248,10 +247,6 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
         </div>
       </div>
     </div>
-
-    @if (isCreateHabitOpen()) {
-      <app-create-new-modal mode="habit" (closeClicked)="isCreateHabitOpen.set(false)"></app-create-new-modal>
-    }
   `
 })
 export class HabitsComponent implements OnDestroy {
@@ -267,7 +262,6 @@ export class HabitsComponent implements OnDestroy {
   readonly dashboard = signal<TodayDashboardDto | null>(null);
   readonly weeklyDashboards = signal<Record<string, TodayDashboardDto>>({});
   readonly isLoading = signal(true);
-  readonly isCreateHabitOpen = signal(false);
   readonly filter = signal<HabitFilter>('today');
   readonly completingId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -344,7 +338,7 @@ export class HabitsComponent implements OnDestroy {
   }
 
   openCreateHabit(): void {
-    this.isCreateHabitOpen.set(true);
+    window.dispatchEvent(new CustomEvent('ido:open-create-modal', { detail: { mode: 'habit' } }));
   }
 
   async completeHabit(habit: HabitView): Promise<void> {

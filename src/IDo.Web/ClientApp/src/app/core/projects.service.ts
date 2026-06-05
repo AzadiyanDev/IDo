@@ -125,7 +125,7 @@ export class ProjectsService {
   }
 
   updateProject(id: string, request: UpdateProjectRequest): Promise<ProjectDto> {
-    return firstValueFrom(this.http.put<ProjectDto>(`/api/projects/${id}`, request, { withCredentials: true }));
+    return firstValueFrom(this.http.post<ProjectDto>(`/api/projects/${id}`, request, { withCredentials: true }));
   }
 
   archiveProject(id: string): Promise<void> {

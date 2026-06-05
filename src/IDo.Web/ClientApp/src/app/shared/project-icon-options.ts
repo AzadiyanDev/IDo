@@ -76,6 +76,15 @@ export const PROJECT_ICON_OPTIONS = [
   'favorite'
 ] as const;
 
+export const HABIT_ICON_OPTIONS = [
+  'repeat',
+  'water_drop',
+  'self_improvement',
+  'bedtime',
+  'directions_run',
+  ...PROJECT_ICON_OPTIONS
+] as const;
+
 export const PROJECT_COLOR_OPTIONS = [
   { label: 'Purple', value: '#B072FF' },
   { label: 'Blue', value: '#3EAEFF' },

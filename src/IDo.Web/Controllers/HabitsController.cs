@@ -34,7 +34,7 @@ public sealed class HabitsController(ICurrentUserService currentUser, IHabitServ
         return Ok(await habitService.CreateHabitAsync(userId.Value, request, cancellationToken));
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateHabitRequest request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
@@ -42,7 +42,7 @@ public sealed class HabitsController(ICurrentUserService currentUser, IHabitServ
         return Ok(await habitService.UpdateHabitAsync(userId.Value, id, request, cancellationToken));
     }
 
-    [HttpDelete("{id:guid}")]
+    [HttpPost("{id:guid}/delete")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();

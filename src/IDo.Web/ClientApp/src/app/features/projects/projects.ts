@@ -5,7 +5,6 @@ import { AuthService } from '../../core/auth.service';
 import { I18nService } from '../../core/i18n.service';
 import { ProjectDetailsDto, ProjectDto, ProjectMemberStatus, ProjectsService, ProjectStatus } from '../../core/projects.service';
 import { TaskDto } from '../../core/today.service';
-import { CreateNewModalComponent } from '../../shared/create-new-modal/create-new-modal';
 
 type ProjectFilter = 'all' | 'owned' | 'shared' | 'archived';
 
@@ -16,7 +15,7 @@ interface ProjectListItem {
 
 @Component({
   selector: 'app-projects',
-  imports: [RouterLink, CreateNewModalComponent],
+  imports: [RouterLink],
   template: `
     <header class="flex justify-between items-center px-margin-mobile py-md w-full sticky top-0 bg-theme-bg/95 backdrop-blur-md z-40">
       <div class="min-w-0">
@@ -213,10 +212,6 @@ interface ProjectListItem {
         <button type="button" (click)="openCreateProject()" class="bg-theme-project-accent/20 text-theme-project-accent font-label-md text-label-md px-md py-2 rounded-full hover:bg-theme-project-accent/30 transition-colors shrink-0 border-none outline-none">{{ i18n.text('Create') }}</button>
       </section>
     </div>
-
-    @if (isCreateProjectOpen()) {
-      <app-create-new-modal mode="project" (closeClicked)="isCreateProjectOpen.set(false)"></app-create-new-modal>
-    }
   `
 })
 export class ProjectsComponent implements OnDestroy {
@@ -231,7 +226,6 @@ export class ProjectsComponent implements OnDestroy {
   readonly filter = signal<ProjectFilter>('all');
   readonly searchTerm = signal('');
   readonly isSearchOpen = signal(false);
-  readonly isCreateProjectOpen = signal(false);
   readonly currentUser = this.auth.currentUser;
   readonly filters: { value: ProjectFilter; label: string }[] = [
     { value: 'all', label: 'All' },
@@ -276,7 +270,7 @@ export class ProjectsComponent implements OnDestroy {
   }
 
   openCreateProject(): void {
-    this.isCreateProjectOpen.set(true);
+    window.dispatchEvent(new CustomEvent('ido:open-create-modal', { detail: { mode: 'project' } }));
   }
 
   toggleSearch(): void {

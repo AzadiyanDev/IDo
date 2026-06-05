@@ -31,7 +31,7 @@ public sealed class ProfileController(
         return user is null ? NotFound() : Ok(user.ToDto());
     }
 
-    [HttpPut]
+    [HttpPost]
     public async Task<IActionResult> Update(UserProfileDto request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
@@ -46,7 +46,7 @@ public sealed class ProfileController(
         return Ok(user.ToDto());
     }
 
-    [HttpPut("account")]
+    [HttpPost("account")]
     public async Task<IActionResult> UpdateAccount(UpdateUserProfileRequest request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
@@ -110,7 +110,7 @@ public sealed class ProfileController(
         return Ok(user.ToDto());
     }
 
-    [HttpPut("settings")]
+    [HttpPost("settings")]
     public async Task<IActionResult> Settings(UserSettingsDto request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();

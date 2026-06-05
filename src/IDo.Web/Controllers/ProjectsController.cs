@@ -32,7 +32,7 @@ public sealed class ProjectsController(ICurrentUserService currentUser, IProject
         return Ok(await projectService.CreateProjectAsync(userId.Value, request, cancellationToken));
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateProjectRequest request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
@@ -57,7 +57,7 @@ public sealed class ProjectsController(ICurrentUserService currentUser, IProject
         return Ok(await projectService.AddSectionAsync(userId.Value, id, request, cancellationToken));
     }
 
-    [HttpPut("{projectId:guid}/sections/{sectionId:guid}")]
+    [HttpPost("{projectId:guid}/sections/{sectionId:guid}")]
     public async Task<IActionResult> UpdateSection(Guid projectId, Guid sectionId, CreateProjectSectionRequest request, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
@@ -97,7 +97,7 @@ public sealed class ProjectsController(ICurrentUserService currentUser, IProject
         return Ok(await projectService.InviteUserToProjectAsync(userId.Value, id, request, cancellationToken));
     }
 
-    [HttpDelete("{projectId:guid}/members/{memberId:guid}")]
+    [HttpPost("{projectId:guid}/members/{memberId:guid}/remove")]
     public async Task<IActionResult> RemoveMember(Guid projectId, Guid memberId, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId();
