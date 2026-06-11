@@ -13,5 +13,6 @@ export const routes: Routes = [
   { path: 'inbox', canActivate: [authGuard], loadComponent: () => import('./features/inbox/inbox').then(m => m.InboxComponent) },
   { path: 'profile', canActivate: [authGuard], loadComponent: () => import('./features/profile/profile').then(m => m.ProfileComponent) },
   { path: 'project/:id', canActivate: [authGuard], loadComponent: () => import('./features/projects/project-details').then(m => m.ProjectDetailsComponent) },
-  { path: 'task/:id', canActivate: [authGuard], loadComponent: () => import('./features/today/task-details').then(m => m.TaskDetailsComponent) }
+  { path: 'task/:id', canActivate: [authGuard], loadComponent: () => import('./features/today/task-details').then(m => m.TaskDetailsComponent) },
+  { path: 'habit/:id', canActivate: [authGuard], loadComponent: () => import('./features/habits/habit-details').then(m => m.HabitDetailsComponent) }
 ];

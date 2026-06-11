@@ -48,6 +48,7 @@ export class App {
       // Hide bottom nav on detail screens
       const hideNav = event.urlAfterRedirects.includes('/project/') || 
                       event.urlAfterRedirects.includes('/task/') ||
+                      event.urlAfterRedirects.includes('/habit/') ||
                       event.urlAfterRedirects.includes('/inbox') ||
                       event.urlAfterRedirects.includes('/profile') ||
                       event.urlAfterRedirects.includes('/login') ||

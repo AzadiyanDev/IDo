@@ -18,6 +18,16 @@ public sealed class HabitsController(ICurrentUserService currentUser, IHabitServ
         return Ok((await unitOfWork.Habits.GetUserHabitsAsync(userId.Value, cancellationToken)).Select(x => x.ToDto()));
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        var end = to ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var start = from ?? end.AddDays(-89);
+        return Ok(await habitService.GetHabitDetailsAsync(userId.Value, id, start, end, cancellationToken));
+    }
+
     [HttpGet("today")]
     public async Task<IActionResult> Today([FromQuery] DateOnly? date, CancellationToken cancellationToken)
     {

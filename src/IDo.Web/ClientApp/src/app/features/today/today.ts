@@ -1,7 +1,9 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { CalendarService } from '../../core/calendar.service';
+import { HabitsService } from '../../core/habits.service';
 import { I18nService } from '../../core/i18n.service';
 import { TaskDto, TodayDashboardDto, TodayHabitDto, TodayProjectDto, TodayService } from '../../core/today.service';
 import { HorizontalDateStripComponent } from '../../shared/calendar/horizontal-date-strip';
@@ -160,31 +162,60 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
       </section>
 
       <section class="flex flex-col gap-md">
-        <h3 class="text-headline-md font-headline-md text-on-surface m-0">{{ i18n.text('Habits') }}</h3>
-        <div class="flex overflow-x-auto hide-scrollbar gap-sm snap-x pb-xs -mx-margin-mobile px-margin-mobile">
+        <div class="flex justify-between items-center">
+          <h3 class="text-headline-md font-headline-md text-on-surface m-0">{{ i18n.text('Habits') }}</h3>
+          <a routerLink="/habits" class="text-primary-container text-body-md font-body-md no-underline hover:underline">{{ i18n.text('See All') }}</a>
+        </div>
+
+        @if (habitError()) {
+          <div class="rounded-2xl border border-error/40 bg-error-container/30 text-on-error-container px-md py-sm text-body-md font-body-md">
+            {{ habitError() }}
+          </div>
+        }
+
+        <div class="flex flex-col gap-sm">
           @for (habit of dashboard()?.todayHabits ?? []; track habit.id) {
-            <div class="rounded-2xl p-md min-w-[140px] flex flex-col justify-between h-[120px] snap-center shrink-0 border"
-              [class.bg-theme-habit-bg]="!habit.isCompletedToday"
-              [class.border-theme-habit-accent]="habit.isCompletedToday"
-              [class.bg-theme-surface]="habit.isCompletedToday"
-              [class.border-theme-border]="!habit.isCompletedToday">
-              <div class="flex justify-between items-start z-10 w-full mb-4">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center"
-                  [class.bg-theme-habit-accent]="habit.isCompletedToday"
-                  [class.text-theme-bg]="habit.isCompletedToday"
-                  [class.bg-theme-habit-accent\/20]="!habit.isCompletedToday"
-                  [class.text-theme-habit-accent]="!habit.isCompletedToday">
-                  <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">{{ habit.isCompletedToday ? 'check' : habit.icon || 'repeat' }}</span>
-                </div>
-                <span class="text-label-md font-label-md text-theme-habit-accent font-bold">{{ habit.currentStreak }}</span>
+            <div
+              role="link"
+              tabindex="0"
+              (click)="openHabitDetails(habit.id)"
+              (keydown.enter)="openHabitDetails(habit.id)"
+              class="bg-theme-surface rounded-2xl border border-theme-border p-md flex items-center gap-md cursor-pointer hover:bg-surface-container-high transition-colors"
+              [class.border-secondary]="habit.isCompletedToday">
+              <button
+                type="button"
+                (click)="suppressHabitAction($event)"
+                (touchstart)="startHabitHold($event, habit)" (touchend)="cancelHabitHold()" (touchcancel)="cancelHabitHold()"
+                (mousedown)="startHabitHold($event, habit)" (mouseup)="cancelHabitHold()" (mouseleave)="cancelHabitHold()"
+                [disabled]="habit.isCompletedToday || completingHabitId() === habit.id"
+                class="habit-check w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all disabled:cursor-default"
+                [class.border-secondary]="habit.isCompletedToday"
+                [class.bg-secondary]="habit.isCompletedToday"
+                [class.text-on-secondary]="habit.isCompletedToday"
+                [class.border-theme-border]="!habit.isCompletedToday"
+                [class.habit-check-active]="holdingHabitId() === habit.id">
+                @if (!habit.isCompletedToday) {
+                  <span class="habit-check-fill" [class.habit-check-fill-active]="holdingHabitId() === habit.id"></span>
+                }
+                @if (habit.isCompletedToday) {
+                  <span class="material-symbols-outlined text-[14px] font-bold z-10" style="font-variation-settings: 'FILL' 1;">check</span>
+                } @else if (completingHabitId() === habit.id) {
+                  <span class="material-symbols-outlined text-[14px] animate-spin z-10">progress_activity</span>
+                }
+              </button>
+
+              <div class="flex flex-col flex-1 min-w-0 pl-1">
+                <span class="text-body-lg font-body-lg text-on-surface font-medium truncate" [class.line-through]="habit.isCompletedToday">{{ habit.title }}</span>
+                <span class="text-label-md font-label-md text-primary-container mt-0.5">{{ habitRowSubtitle(habit) }}</span>
               </div>
-              <div class="z-10 w-full">
-                <span class="text-body-md font-body-md font-medium block" [class.text-theme-habit-accent]="habit.isCompletedToday" [class.text-white]="!habit.isCompletedToday">{{ habit.title }}</span>
-                <span class="text-label-md font-label-md text-white/60">{{ habit.isCompletedToday ? i18n.text('Done') : i18n.text('Streak') }}</span>
+
+              <div class="min-w-12 h-8 px-sm rounded-full bg-theme-habit-bg text-theme-habit-accent flex items-center justify-center gap-1 shrink-0">
+                <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+                <span class="text-label-md font-label-md font-bold leading-none">{{ habitStreakLabel(habit.currentStreak) }}</span>
               </div>
             </div>
           } @empty {
-            <div class="bg-theme-surface rounded-2xl border border-theme-border p-md min-w-[180px] text-on-surface-variant">
+            <div class="bg-theme-surface rounded-2xl border border-theme-border p-lg text-center text-on-surface-variant">
               {{ i18n.text('No habits today.') }}
             </div>
           }
@@ -216,19 +247,31 @@ import { SlideAlertComponent } from '../../shared/slide-alert/slide-alert';
         </div>
       </section>
     </div>
-  `
+  `,
+  styles: [`
+    .habit-check { position: relative; overflow: hidden; }
+    .habit-check-fill { position: absolute; inset: 0 auto 0 0; width: 0%; height: 100%; background: var(--color-secondary); opacity: 0.28; transition: width 180ms ease-out; }
+    .habit-check-fill-active { width: 100%; transition: width 2000ms linear; }
+    .habit-check-active { border-color: var(--color-secondary); }
+  `]
 })
 export class TodayComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly calendar = inject(CalendarService);
   readonly i18n = inject(I18nService);
   private readonly todayService = inject(TodayService);
+  private readonly habitsService = inject(HabitsService);
   private readonly router = inject(Router);
   private readonly taskCreatedHandler = (event: Event) => void this.handleTaskCreated(event);
+  private readonly habitHoldDuration = 2000;
+  private habitHoldTimer?: ReturnType<typeof setTimeout>;
 
   readonly dashboard = signal<TodayDashboardDto | null>(null);
   readonly isLoading = signal(true);
   readonly isNotificationsOpen = signal(false);
+  readonly completingHabitId = signal<string | null>(null);
+  readonly holdingHabitId = signal<string | null>(null);
+  readonly habitError = signal<string | null>(null);
   readonly selectedDate = signal(this.calendar.todayKey());
   readonly currentUser = this.auth.currentUser;
   readonly displayName = computed(() => {
@@ -289,6 +332,7 @@ export class TodayComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     window.removeEventListener('ido:task-created', this.taskCreatedHandler);
+    this.cancelHabitHold();
   }
 
   taskTimeLabel(task: TaskDto): string {
@@ -349,6 +393,39 @@ export class TodayComponent implements OnDestroy {
     void this.router.navigate(['/inbox']);
   }
 
+  openHabitDetails(id: string): void {
+    void this.router.navigate(['/habit', id]);
+  }
+
+  startHabitHold(event: Event, habit: TodayHabitDto): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (habit.isCompletedToday || this.completingHabitId() || this.holdingHabitId()) return;
+    window.navigator.vibrate?.(50);
+    this.holdingHabitId.set(habit.id);
+    this.habitHoldTimer = setTimeout(() => void this.completeHeldHabit(habit), this.habitHoldDuration);
+  }
+
+  cancelHabitHold(): void {
+    if (this.habitHoldTimer) clearTimeout(this.habitHoldTimer);
+    this.habitHoldTimer = undefined;
+    this.holdingHabitId.set(null);
+  }
+
+  suppressHabitAction(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  habitRowSubtitle(habit: TodayHabitDto): string {
+    if (habit.isCompletedToday) return this.i18n.text('Done');
+    return this.i18n.text('Habit');
+  }
+
+  habitStreakLabel(value: number): string {
+    return this.i18n.language() === 'fa' ? this.i18n.number(value) : `${value}`;
+  }
+
   selectDate(date: string): void {
     if (date === this.selectedDate()) return;
     this.selectedDate.set(date);
@@ -362,8 +439,24 @@ export class TodayComponent implements OnDestroy {
     return 'assignment_turned_in';
   }
 
-  private async loadToday(): Promise<void> {
-    this.isLoading.set(true);
+  private async completeHeldHabit(habit: TodayHabitDto): Promise<void> {
+    if (habit.isCompletedToday) return;
+    this.completingHabitId.set(habit.id);
+    this.habitError.set(null);
+    try {
+      await this.habitsService.completeHabit(habit.id, this.selectedDate());
+      await this.loadToday(false);
+      window.navigator.vibrate?.([50, 50, 50]);
+    } catch (error) {
+      this.habitError.set(this.messageFromError(error, this.i18n.text('Could not complete habit.')));
+    } finally {
+      this.completingHabitId.set(null);
+      this.cancelHabitHold();
+    }
+  }
+
+  private async loadToday(showLoading = true): Promise<void> {
+    if (showLoading) this.isLoading.set(true);
     try {
       this.dashboard.set(await this.todayService.getToday(this.selectedDate()));
     } finally {
@@ -379,5 +472,15 @@ export class TodayComponent implements OnDestroy {
     }
 
     void this.loadToday();
+  }
+
+  private messageFromError(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error as { errors?: string[]; error?: string } | null;
+      if (Array.isArray(body?.errors) && body.errors.length > 0) return body.errors.join(' ');
+      if (body?.error) return body.error;
+    }
+
+    return fallback;
   }
 }

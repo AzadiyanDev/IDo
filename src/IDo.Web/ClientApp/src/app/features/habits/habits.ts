@@ -1,5 +1,6 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { CalendarService } from '../../core/calendar.service';
 import { I18nService } from '../../core/i18n.service';
 import { HabitDto, HabitsService } from '../../core/habits.service';
@@ -188,28 +189,39 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
             }
           } @else {
             @for (habit of filteredHabits(); track habit.id) {
-              <div class="bg-theme-surface border border-theme-border rounded-2xl p-md flex items-center justify-between gap-md transition-transform active:scale-[0.98]"
+              <div
+                role="link"
+                tabindex="0"
+                (click)="openHabitDetails(habit.id)"
+                (keydown.enter)="openHabitDetails(habit.id)"
+                class="bg-theme-surface border border-theme-border rounded-2xl p-md flex items-center justify-between gap-md transition-all active:scale-[0.98] cursor-pointer hover:bg-surface-container-high"
                 [class.border-secondary]="habit.isCompletedToday"
                 [class.opacity-55]="habit.isRestToday">
                 <div class="flex items-center gap-md min-w-0">
                   <button
                     type="button"
-                    (click)="completeHabit(habit)"
+                    (click)="suppressHabitAction($event)"
+                    (touchstart)="startHabitHold($event, habit)" (touchend)="cancelHabitHold()" (touchcancel)="cancelHabitHold()"
+                    (mousedown)="startHabitHold($event, habit)" (mouseup)="cancelHabitHold()" (mouseleave)="cancelHabitHold()"
                     [attr.aria-label]="habit.isCompletedToday ? habit.title + ' completed' : habit.isRestToday ? habit.title + ' rest day' : 'Complete ' + habit.title"
                     [disabled]="habit.isCompletedToday || habit.isRestToday || completingId() === habit.id"
-                    class="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all disabled:cursor-default"
+                    class="habit-check w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all disabled:cursor-default"
                     [class.bg-secondary]="habit.isCompletedToday"
                     [class.text-on-secondary]="habit.isCompletedToday"
                     [class.border-secondary]="habit.isCompletedToday"
                     [class.bg-surface-container-high]="habit.isRestToday"
                     [class.border-theme-border]="!habit.isCompletedToday"
-                    [class.text-on-surface-variant]="habit.isRestToday">
+                    [class.text-on-surface-variant]="habit.isRestToday"
+                    [class.habit-check-active]="holdingHabitId() === habit.id">
+                    @if (!habit.isCompletedToday && !habit.isRestToday) {
+                      <span class="habit-check-fill" [class.habit-check-fill-active]="holdingHabitId() === habit.id"></span>
+                    }
                     @if (habit.isCompletedToday) {
-                      <span class="material-symbols-outlined text-[17px]" style="font-variation-settings: 'FILL' 1;">check</span>
+                      <span class="material-symbols-outlined text-[17px] z-10" style="font-variation-settings: 'FILL' 1;">check</span>
                     } @else if (habit.isRestToday) {
-                      <span class="material-symbols-outlined text-[16px]">bedtime</span>
+                      <span class="material-symbols-outlined text-[16px] z-10">bedtime</span>
                     } @else if (completingId() === habit.id) {
-                      <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                      <span class="material-symbols-outlined text-[16px] animate-spin z-10">progress_activity</span>
                     }
                   </button>
 
@@ -226,8 +238,9 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
                   </div>
                 </div>
 
-                <div class="w-9 h-9 rounded-full bg-theme-habit-bg text-theme-habit-accent flex items-center justify-center shrink-0">
-                  <span class="material-symbols-outlined text-[19px]">{{ habit.icon || 'repeat' }}</span>
+                <div class="min-w-12 h-8 px-sm rounded-full bg-theme-habit-bg text-theme-habit-accent flex items-center justify-center gap-1 shrink-0">
+                  <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+                  <span class="text-label-md font-label-md font-bold leading-none">{{ habitStreakLabel(habit.currentStreak) }}</span>
                 </div>
               </div>
             } @empty {
@@ -247,16 +260,25 @@ type HabitFilter = 'today' | 'all' | 'open' | 'done' | 'rest';
         </div>
       </div>
     </div>
-  `
+  `,
+  styles: [`
+    .habit-check { position: relative; overflow: hidden; }
+    .habit-check-fill { position: absolute; inset: 0 auto 0 0; width: 0%; height: 100%; background: var(--color-secondary); opacity: 0.28; transition: width 180ms ease-out; }
+    .habit-check-fill-active { width: 100%; transition: width 2000ms linear; }
+    .habit-check-active { border-color: var(--color-secondary); }
+  `]
 })
 export class HabitsComponent implements OnDestroy {
   private readonly calendar = inject(CalendarService);
   readonly i18n = inject(I18nService);
   private readonly habitsService = inject(HabitsService);
   private readonly todayService = inject(TodayService);
+  private readonly router = inject(Router);
   private readonly today = new Date();
   private readonly todayKey = this.calendar.todayKey();
   private readonly habitCreatedHandler = () => void this.load();
+  private readonly habitHoldDuration = 2000;
+  private habitHoldTimer?: ReturnType<typeof setTimeout>;
 
   readonly habits = signal<HabitDto[]>([]);
   readonly dashboard = signal<TodayDashboardDto | null>(null);
@@ -264,6 +286,7 @@ export class HabitsComponent implements OnDestroy {
   readonly isLoading = signal(true);
   readonly filter = signal<HabitFilter>('today');
   readonly completingId = signal<string | null>(null);
+  readonly holdingHabitId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly filters: { value: HabitFilter; label: string }[] = [
     { value: 'today', label: 'Today' },
@@ -335,10 +358,35 @@ export class HabitsComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     window.removeEventListener('ido:habit-created', this.habitCreatedHandler);
+    this.cancelHabitHold();
   }
 
   openCreateHabit(): void {
     window.dispatchEvent(new CustomEvent('ido:open-create-modal', { detail: { mode: 'habit' } }));
+  }
+
+  openHabitDetails(id: string): void {
+    void this.router.navigate(['/habit', id]);
+  }
+
+  startHabitHold(event: Event, habit: HabitView): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (habit.isCompletedToday || habit.isRestToday || this.completingId() || this.holdingHabitId()) return;
+    window.navigator.vibrate?.(50);
+    this.holdingHabitId.set(habit.id);
+    this.habitHoldTimer = setTimeout(() => void this.completeHabit(habit), this.habitHoldDuration);
+  }
+
+  cancelHabitHold(): void {
+    if (this.habitHoldTimer) clearTimeout(this.habitHoldTimer);
+    this.habitHoldTimer = undefined;
+    this.holdingHabitId.set(null);
+  }
+
+  suppressHabitAction(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   async completeHabit(habit: HabitView): Promise<void> {
@@ -353,6 +401,7 @@ export class HabitsComponent implements OnDestroy {
       this.error.set(this.messageFromError(error, this.i18n.text('Could not complete habit.')));
     } finally {
       this.completingId.set(null);
+      this.cancelHabitHold();
     }
   }
 
@@ -373,6 +422,10 @@ export class HabitsComponent implements OnDestroy {
     return this.i18n.language() === 'fa'
       ? `${this.i18n.number(this.bestStreak())} روز`
       : `${this.bestStreak()} Days`;
+  }
+
+  habitStreakLabel(value: number): string {
+    return this.i18n.language() === 'fa' ? this.i18n.number(value) : `${value}`;
   }
 
   shownLabel(count: number): string {

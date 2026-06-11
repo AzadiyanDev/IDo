@@ -49,6 +49,88 @@ public sealed class HabitService(IUnitOfWork unitOfWork, IDateTimeProvider dateT
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<HabitDetailsDto> GetHabitDetailsAsync(Guid userId, Guid habitId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    {
+        if (from > to) (from, to) = (to, from);
+
+        var habit = await unitOfWork.Habits.GetHabitWithLogsAsync(habitId, cancellationToken) ?? throw new KeyNotFoundException("Habit not found.");
+        if (habit.UserId != userId) throw new UnauthorizedAccessException("User cannot view this habit.");
+
+        var today = dateTimeProvider.Today;
+        var logs = habit.Logs
+            .Where(x => x.Date >= from && x.Date <= to)
+            .OrderByDescending(x => x.Date)
+            .ThenByDescending(x => x.UpdatedAtUtc ?? x.CompletedAtUtc ?? x.CreatedAtUtc)
+            .ToArray();
+        var latestLogByDate = logs
+            .GroupBy(x => x.Date)
+            .ToDictionary(
+                x => x.Key,
+                x => x.OrderByDescending(log => log.UpdatedAtUtc ?? log.CompletedAtUtc ?? log.CreatedAtUtc).First());
+
+        var recentDays = EachDate(from, to)
+            .Select(date =>
+            {
+                latestLogByDate.TryGetValue(date, out var log);
+                return new HabitDayAnalysisDto(
+                    date,
+                    date.DayOfWeek,
+                    HabitRules.IsScheduledActiveDay(habit, date),
+                    log?.Status,
+                    log?.CompletedAtUtc);
+            })
+            .OrderByDescending(x => x.Date)
+            .ToArray();
+
+        var completedDays = recentDays.Count(IsDone);
+        var missedDays = recentDays.Count(day => IsMissed(day, today));
+        var scheduledDays = recentDays.Count(x => x.IsScheduled);
+        var successBase = completedDays + missedDays;
+        var rangeDays = Math.Max(1, from.DayNumber <= to.DayNumber ? to.DayNumber - from.DayNumber + 1 : 1);
+        var analytics = new HabitAnalyticsDto(
+            from,
+            to,
+            scheduledDays,
+            completedDays,
+            missedDays,
+            recentDays.Count(day => day.IsScheduled && day.Date >= today && !IsDone(day)),
+            recentDays.Count(day => !day.IsScheduled),
+            logs.Count(x => x.Status == HabitLogStatus.OutOfSchedule),
+            successBase == 0 ? 0 : decimal.Round(completedDays * 100m / successBase, 2),
+            scheduledDays == 0 ? 0 : decimal.Round(completedDays * 100m / scheduledDays, 2),
+            decimal.Round(completedDays / Math.Max(rangeDays / 7m, 1m), 2),
+            habit.CurrentStreak,
+            habit.BestStreak,
+            logs.Where(x => x.Status == HabitLogStatus.Done).Select(x => (DateOnly?)x.Date).FirstOrDefault(),
+            CalculateLongestGap(recentDays, today));
+
+        var weekdayStats = recentDays
+            .Where(x => x.IsScheduled)
+            .GroupBy(x => x.DayOfWeek)
+            .Select(group =>
+            {
+                var scheduled = group.Count();
+                var done = group.Count(IsDone);
+                var missed = group.Count(day => IsMissed(day, today));
+                var rateBase = done + missed;
+                return new HabitWeekdayAnalysisDto(
+                    group.Key,
+                    scheduled,
+                    done,
+                    missed,
+                    rateBase == 0 ? 0 : decimal.Round(done * 100m / rateBase, 2));
+            })
+            .OrderBy(x => x.DayOfWeek)
+            .ToArray();
+
+        return new HabitDetailsDto(
+            habit.ToDto(),
+            logs.Select(x => x.ToDto()).ToArray(),
+            analytics,
+            recentDays,
+            weekdayStats);
+    }
+
     public async Task<HabitLogDto> CompleteHabitForDateAsync(Guid userId, Guid habitId, DateOnly date, CancellationToken cancellationToken = default)
     {
         var habit = await unitOfWork.Habits.GetHabitWithLogsAsync(habitId, cancellationToken) ?? throw new KeyNotFoundException("Habit not found.");
@@ -87,5 +169,36 @@ public sealed class HabitService(IUnitOfWork unitOfWork, IDateTimeProvider dateT
     {
         foreach (var day in activeDays.Distinct()) habit.ScheduleDays.Add(new HabitScheduleDay { Habit = habit, DayOfWeek = day, DayType = HabitDayType.Active });
         foreach (var day in restDays.Distinct().Except(activeDays)) habit.ScheduleDays.Add(new HabitScheduleDay { Habit = habit, DayOfWeek = day, DayType = HabitDayType.Rest });
+    }
+
+    private static IEnumerable<DateOnly> EachDate(DateOnly from, DateOnly to)
+    {
+        for (var date = from; date <= to; date = date.AddDays(1)) yield return date;
+    }
+
+    private static bool IsDone(HabitDayAnalysisDto day) => day.Status == HabitLogStatus.Done;
+
+    private static bool IsMissed(HabitDayAnalysisDto day, DateOnly today) =>
+        day.IsScheduled
+        && day.Date < today
+        && day.Status is not HabitLogStatus.Done and not HabitLogStatus.RestDay and not HabitLogStatus.Skipped;
+
+    private static int CalculateLongestGap(IEnumerable<HabitDayAnalysisDto> days, DateOnly today)
+    {
+        var longest = 0;
+        var current = 0;
+        foreach (var day in days.Where(x => x.IsScheduled && x.Date < today).OrderBy(x => x.Date))
+        {
+            if (IsDone(day))
+            {
+                current = 0;
+                continue;
+            }
+
+            current++;
+            longest = Math.Max(longest, current);
+        }
+
+        return longest;
     }
 }
