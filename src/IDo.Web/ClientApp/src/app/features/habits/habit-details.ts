@@ -5,6 +5,9 @@ import { CalendarService } from '../../core/calendar.service';
 import { HabitDayAnalysisDto, HabitDetailsDto, HabitLogStatus, HabitsService } from '../../core/habits.service';
 import { I18nService } from '../../core/i18n.service';
 
+type HoldAction = 'complete' | 'undo';
+type HabitGridDay = HabitDayAnalysisDto & { dayNumber: string };
+
 @Component({
   selector: 'app-habit-details',
   template: `
@@ -14,7 +17,7 @@ import { I18nService } from '../../core/i18n.service';
       </button>
       <div class="flex flex-col items-center min-w-0 px-sm">
         <h1 class="font-headline-md text-headline-md text-on-surface m-0 leading-tight">{{ i18n.text('Habit Details') }}</h1>
-        <span class="font-label-md text-label-md text-on-surface-variant truncate max-w-[220px]">{{ scheduleLabel() }}</span>
+        <span class="font-label-md text-label-md text-on-surface-variant truncate max-w-[220px]">{{ selectedDateLabel() }}</span>
       </div>
       <button type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors active:scale-95 border-none bg-transparent">
         <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">more_vert</span>
@@ -41,11 +44,11 @@ import { I18nService } from '../../core/i18n.service';
           <div class="flex items-start justify-between gap-md">
             <div
               class="status-badge"
-              [class.status-open]="!isCompletedToday() && !isRestToday()"
-              [class.status-done]="isCompletedToday()"
-              [class.status-rest]="isRestToday()">
+              [class.status-open]="!isCompletedTargetDate() && !isRestTargetDate()"
+              [class.status-done]="isCompletedTargetDate()"
+              [class.status-rest]="!isCompletedTargetDate() && isRestTargetDate()">
               <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">{{ statusIcon() }}</span>
-              {{ todayStatusLabel() }}
+              {{ targetDateStatusLabel() }}
             </div>
             <div class="flex items-center gap-xs text-theme-orange font-label-md bg-surface-container px-sm py-base rounded-full border border-outline-variant/30 shrink-0">
               <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
@@ -66,6 +69,10 @@ import { I18nService } from '../../core/i18n.service';
               {{ scheduleLabel() }}
             </div>
             <div class="info-chip">
+              <span class="material-symbols-outlined text-[16px] text-primary">calendar_today</span>
+              {{ selectedDateLabel() }}
+            </div>
+            <div class="info-chip">
               <span class="material-symbols-outlined text-[16px] text-theme-orange">notifications</span>
               {{ reminderLabel() }}
             </div>
@@ -84,6 +91,14 @@ import { I18nService } from '../../core/i18n.service';
               <span>{{ i18n.text('Schedule') }}</span>
             </div>
             <span class="detail-value">{{ scheduleLabel() }}</span>
+          </div>
+          <div class="divider"></div>
+          <div class="detail-row">
+            <div class="detail-title">
+              <span class="material-symbols-outlined">calendar_today</span>
+              <span>{{ i18n.text('Selected date') }}</span>
+            </div>
+            <span class="detail-value">{{ selectedDateLabel() }}</span>
           </div>
           <div class="divider"></div>
           <div class="detail-row">
@@ -159,21 +174,14 @@ import { I18nService } from '../../core/i18n.service';
             <div class="grid grid-cols-10 gap-xs">
               @for (day of recentGrid(); track day.date) {
                 <div
-                  class="aspect-square rounded-full border flex items-center justify-center"
-                  [class.bg-secondary]="isDoneDay(day)"
-                  [class.border-secondary]="isDoneDay(day)"
-                  [class.bg-theme-orange\/20]="isOpenDay(day)"
-                  [class.border-theme-orange\/40]="isOpenDay(day)"
-                  [class.bg-error-container\/45]="isMissedDay(day)"
-                  [class.border-error\/40]="isMissedDay(day)"
-                  [class.bg-surface-container-highest]="!day.isScheduled"
-                  [class.border-theme-border]="!day.isScheduled"
+                  class="habit-day-cell aspect-square rounded-full border flex items-center justify-center"
+                  [class.habit-day-done]="isDoneDay(day)"
+                  [class.habit-day-open]="isOpenDay(day)"
+                  [class.habit-day-missed]="isMissedDay(day)"
+                  [class.habit-day-rest]="!day.isScheduled && !isDoneDay(day)"
+                  [class.habit-day-target]="day.date === targetDate"
                   [attr.title]="dateOnlyLabel(day.date)">
-                  @if (isDoneDay(day)) {
-                    <span class="material-symbols-outlined text-on-secondary text-[13px]" style="font-variation-settings: 'FILL' 1;">check</span>
-                  } @else if (!day.isScheduled) {
-                    <span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant"></span>
-                  }
+                  <span>{{ day.dayNumber }}</span>
                 </div>
               }
             </div>
@@ -198,23 +206,42 @@ import { I18nService } from '../../core/i18n.service';
       </div>
 
       <div class="fixed bottom-0 left-0 w-full z-50 p-margin-mobile bg-theme-bg/70 backdrop-blur-md border-t border-theme-border/50 rounded-t-[32px] flex justify-center items-center">
-        <button
-          type="button"
-          (touchstart)="startHold($event)" (touchend)="cancelHold()" (touchcancel)="cancelHold()"
-          (mousedown)="startHold($event)" (mouseup)="cancelHold()" (mouseleave)="cancelHold()"
-          [disabled]="!canCompleteToday() || isSavingCompletion()"
-          class="hold-button w-full max-w-[448px]"
-          [class.hold-active]="isHolding()"
-          [class.hold-complete]="isCompletedToday()"
-          [class.hold-rest]="isRestToday()">
-          @if (canCompleteToday()) {
-            <div class="hold-fill" [class.hold-fill-active]="isHolding()"></div>
-          }
-          <span class="material-symbols-outlined z-10" [style.font-variation-settings]="isCompletedToday() ? '&quot;FILL&quot; 1' : '&quot;wght&quot; 300'">
-            {{ bottomActionIcon() }}
-          </span>
-          <span class="font-headline-md z-10 text-[16px]">{{ bottomActionLabel() }}</span>
-        </button>
+        <div class="hold-actions w-full max-w-[448px] mx-auto">
+          <button
+            type="button"
+            (touchstart)="startHold($event, 'complete')" (touchend)="cancelHold()" (touchcancel)="cancelHold()"
+            (mousedown)="startHold($event, 'complete')" (mouseup)="cancelHold()" (mouseleave)="cancelHold()"
+            [disabled]="!canCompleteTargetDate() || isSavingAction()"
+            class="hold-button hold-next"
+            [class.hold-active]="activeHoldAction() === 'complete'"
+            [class.hold-suppressed]="activeHoldAction() === 'undo'"
+            [class.hold-complete]="isCompletedTargetDate()"
+            [class.hold-rest]="!isCompletedTargetDate() && isRestTargetDate()">
+            @if (canCompleteTargetDate()) {
+              <div class="hold-fill" [class.hold-fill-active]="activeHoldAction() === 'complete'"></div>
+            }
+            <span class="material-symbols-outlined z-10" [style.font-variation-settings]="isCompletedTargetDate() ? '&quot;FILL&quot; 1' : '&quot;wght&quot; 300'">
+              {{ completeActionIcon() }}
+            </span>
+            <span class="font-headline-md z-10 text-[16px]">{{ completeActionLabel() }}</span>
+          </button>
+
+          <button
+            type="button"
+            (touchstart)="startHold($event, 'undo')" (touchend)="cancelHold()" (touchcancel)="cancelHold()"
+            (mousedown)="startHold($event, 'undo')" (mouseup)="cancelHold()" (mouseleave)="cancelHold()"
+            [disabled]="!canUndoTargetDate() || isSavingAction()"
+            class="hold-button hold-previous"
+            [class.hold-active]="activeHoldAction() === 'undo'"
+            [class.hold-suppressed]="activeHoldAction() === 'complete'"
+            [attr.aria-label]="i18n.text('Hold 2s to undo')">
+            @if (canUndoTargetDate()) {
+              <div class="hold-fill hold-fill-reverse" [class.hold-fill-active]="activeHoldAction() === 'undo'"></div>
+            }
+            <span class="material-symbols-outlined z-10">{{ isSavingUndo() ? 'progress_activity' : 'undo' }}</span>
+            <span class="hold-previous-label font-headline-md z-10 text-[16px]">{{ undoActionLabel() }}</span>
+          </button>
+        </div>
       </div>
     }
   `,
@@ -244,12 +271,27 @@ import { I18nService } from '../../core/i18n.service';
     .weekday-track { height: 8px; border-radius: 999px; overflow: hidden; background: var(--color-surface-container-highest); }
     .weekday-fill { height: 100%; border-radius: inherit; background: var(--color-secondary); }
     .weekday-rate { color: var(--color-on-surface-variant); font: 600 11px/14px var(--font-app); text-align: right; }
-    .hold-button { height: 64px; border-radius: 999px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; user-select: none; outline: none; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); color: var(--color-on-surface); transition: transform 180ms ease, border-color 240ms ease, background-color 240ms ease, color 240ms ease, opacity 180ms ease; }
+    .habit-day-cell { position: relative; background: var(--color-theme-elevated); border-color: var(--color-theme-border); color: var(--color-on-surface); font: 700 11px/1 var(--font-app); transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, outline-color 180ms ease; }
+    .habit-day-done { background: var(--color-secondary); border-color: var(--color-secondary); color: var(--color-on-secondary); }
+    .habit-day-open { background: rgba(255, 192, 0, 0.16); border-color: rgba(255, 192, 0, 0.36); color: var(--color-theme-orange); }
+    .habit-day-missed { background: rgba(255, 84, 84, 0.18); border-color: rgba(255, 84, 84, 0.36); color: var(--color-error); }
+    .habit-day-rest { background: transparent; border-color: rgba(142, 155, 174, 0.28); border-style: dashed; color: var(--color-on-surface-variant); opacity: 0.62; }
+    .habit-day-target { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+    .hold-actions { display: flex; gap: 10px; align-items: center; justify-content: center; }
+    .hold-button { height: 64px; border-radius: 999px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; user-select: none; outline: none; border: 1px solid var(--color-theme-border); background: var(--color-theme-elevated); color: var(--color-on-surface); transition: flex-basis 220ms ease, flex-grow 220ms ease, transform 180ms ease, border-color 240ms ease, background-color 240ms ease, color 240ms ease, opacity 180ms ease, padding 180ms ease; }
+    .hold-next { flex: 4 1 80%; min-width: 0; }
+    .hold-previous { flex: 1 1 20%; min-width: 64px; padding-inline: 0; color: var(--color-theme-orange); }
+    .hold-previous-label { display: none; white-space: nowrap; }
+    .hold-previous.hold-active .hold-previous-label { display: inline; }
+    .hold-active { flex: 1 0 100%; padding-inline: 18px; }
+    .hold-suppressed { flex: 0 1 0; min-width: 0; opacity: 0; padding: 0; border-width: 0; pointer-events: none; }
     .hold-button:active, .hold-active { transform: scale(0.985); }
     .hold-button:disabled { cursor: default; }
+    .hold-previous:disabled { color: var(--color-on-surface-variant); opacity: 0.45; }
     .hold-complete { background: rgba(0, 244, 185, 0.16); border-color: rgba(0, 244, 185, 0.32); color: var(--color-theme-green); }
     .hold-rest { opacity: 0.58; color: var(--color-on-surface-variant); }
     .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0%; opacity: 0.28; background: var(--color-theme-green); transition: width 220ms ease-out; }
+    .hold-fill-reverse { inset: 0 0 0 auto; background: var(--color-theme-orange); }
     .hold-fill-active { width: 100%; transition: width 2000ms linear; }
   `]
 })
@@ -261,6 +303,7 @@ export class HabitDetailsComponent implements OnDestroy {
   readonly location = inject(Location);
 
   private readonly habitId = this.route.snapshot.paramMap.get('id') ?? '';
+  readonly targetDate = this.resolveTargetDate();
   private readonly todayKey = this.calendar.todayKey();
   private readonly holdDuration = 2000;
   private holdTimer?: ReturnType<typeof setTimeout>;
@@ -269,15 +312,22 @@ export class HabitDetailsComponent implements OnDestroy {
   readonly isLoading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly isHolding = signal(false);
+  readonly activeHoldAction = signal<HoldAction | null>(null);
   readonly isSavingCompletion = signal(false);
+  readonly isSavingUndo = signal(false);
 
   readonly habit = computed(() => this.details()?.habit ?? null);
-  readonly todayState = computed(() => this.details()?.recentDays.find(day => day.date === this.todayKey) ?? null);
-  readonly isCompletedToday = computed(() => this.isDoneStatus(this.todayState()?.status ?? null));
-  readonly isRestToday = computed(() => this.todayState() ? !this.todayState()!.isScheduled : false);
-  readonly canCompleteToday = computed(() => Boolean(this.todayState()?.isScheduled) && !this.isCompletedToday());
+  readonly targetDateState = computed(() => this.details()?.recentDays.find(day => day.date === this.targetDate) ?? null);
+  readonly isCompletedTargetDate = computed(() => this.isDoneStatus(this.targetDateState()?.status ?? null));
+  readonly isRestTargetDate = computed(() => this.targetDateState() ? !this.targetDateState()!.isScheduled : false);
+  readonly canCompleteTargetDate = computed(() => Boolean(this.targetDateState()?.isScheduled) && !this.isCompletedTargetDate());
+  readonly canUndoTargetDate = computed(() => this.isCompletedTargetDate());
+  readonly isSavingAction = computed(() => this.isSavingCompletion() || this.isSavingUndo());
   readonly completionHistory = computed(() => this.details()?.logs.filter(log => this.isDoneStatus(log.status)) ?? []);
-  readonly recentGrid = computed(() => [...(this.details()?.recentDays ?? [])].slice(0, 30).reverse());
+  readonly recentGrid = computed<HabitGridDay[]>(() => [...(this.details()?.recentDays ?? [])]
+    .slice(0, 30)
+    .reverse()
+    .map(day => ({ ...day, dayNumber: this.dayNumberLabel(day.date) })));
   readonly weekdayRows = computed(() => (this.details()?.weekdayStats ?? []).map(item => ({
     label: this.dayOfWeekLabel(item.dayOfWeek),
     rate: item.successRate,
@@ -306,44 +356,55 @@ export class HabitDetailsComponent implements OnDestroy {
     this.cancelHold();
   }
 
-  startHold(event: Event): void {
+  startHold(event: Event, action: HoldAction): void {
     event.preventDefault();
-    if (!this.canCompleteToday() || this.isSavingCompletion() || this.isHolding()) return;
+    if (!this.canRunHoldAction(action) || this.isSavingAction() || this.isHolding()) return;
     window.navigator.vibrate?.(50);
     this.isHolding.set(true);
-    this.holdTimer = setTimeout(() => void this.completeHeldHabit(), this.holdDuration);
+    this.activeHoldAction.set(action);
+    this.holdTimer = setTimeout(() => void this.runHeldAction(action), this.holdDuration);
   }
 
   cancelHold(): void {
     if (this.holdTimer) clearTimeout(this.holdTimer);
     this.holdTimer = undefined;
     this.isHolding.set(false);
+    this.activeHoldAction.set(null);
   }
 
   statusIcon(): string {
-    if (this.isCompletedToday()) return 'check_circle';
-    if (this.isRestToday()) return 'bedtime';
+    if (this.isCompletedTargetDate()) return 'check_circle';
+    if (this.isRestTargetDate()) return 'bedtime';
     return 'radio_button_unchecked';
   }
 
-  todayStatusLabel(): string {
-    if (this.isCompletedToday()) return this.i18n.text('Completed today');
-    if (this.isRestToday()) return this.i18n.text('Rest day');
-    return this.i18n.text('Open');
+  targetDateStatusLabel(): string {
+    if (this.isCompletedTargetDate()) return this.i18n.text('Completed for date');
+    if (this.isRestTargetDate()) return this.i18n.text('Rest for date');
+    return this.i18n.text('Open for date');
   }
 
-  bottomActionIcon(): string {
-    if (this.isCompletedToday()) return 'check_circle';
-    if (this.isRestToday()) return 'bedtime';
+  completeActionIcon(): string {
+    if (this.isCompletedTargetDate()) return 'check_circle';
+    if (this.isRestTargetDate()) return 'bedtime';
     if (this.isSavingCompletion()) return 'progress_activity';
     return 'fingerprint';
   }
 
-  bottomActionLabel(): string {
+  completeActionLabel(): string {
     if (this.isSavingCompletion()) return this.i18n.text('Completing...');
-    if (this.isCompletedToday()) return this.i18n.text('Habit Completed');
-    if (this.isRestToday()) return this.i18n.text('Rest day');
+    if (this.isCompletedTargetDate()) return this.i18n.text('Habit Completed');
+    if (this.isRestTargetDate()) return this.i18n.text('Rest day');
     return this.i18n.text('Hold 2s to mark done');
+  }
+
+  undoActionLabel(): string {
+    if (this.isSavingUndo()) return this.i18n.text('Undoing...');
+    return this.i18n.text('Hold 2s to undo');
+  }
+
+  selectedDateLabel(): string {
+    return this.calendar.formatLongDateKey(this.targetDate);
   }
 
   scheduleLabel(): string {
@@ -419,6 +480,19 @@ export class HabitDetailsComponent implements OnDestroy {
     return day.isScheduled && day.date < this.todayKey && !this.isDoneStatus(day.status);
   }
 
+  private resolveTargetDate(): string {
+    const queryDate = this.route.snapshot.queryParamMap.get('date');
+    return this.calendar.dateFromKey(queryDate) ? queryDate! : this.calendar.todayKey();
+  }
+
+  private detailsRange(): { from: string; to: string } {
+    const end = this.calendar.dateFromKey(this.targetDate) ?? new Date();
+    return {
+      from: this.calendar.formatDateKey(this.calendar.addDays(end, -89)),
+      to: this.targetDate
+    };
+  }
+
   private async load(showLoading = true): Promise<void> {
     if (!this.habitId) {
       this.loadError.set(this.i18n.text('Habit id is missing.'));
@@ -428,7 +502,8 @@ export class HabitDetailsComponent implements OnDestroy {
     if (showLoading) this.isLoading.set(true);
     this.loadError.set(null);
     try {
-      this.details.set(await this.habitsService.getHabitDetails(this.habitId));
+      const range = this.detailsRange();
+      this.details.set(await this.habitsService.getHabitDetails(this.habitId, range.from, range.to));
     } catch {
       this.loadError.set(this.i18n.text('The habit could not be loaded.'));
     } finally {
@@ -436,11 +511,15 @@ export class HabitDetailsComponent implements OnDestroy {
     }
   }
 
+  private runHeldAction(action: HoldAction): Promise<void> {
+    return action === 'complete' ? this.completeHeldHabit() : this.undoHeldHabit();
+  }
+
   private async completeHeldHabit(): Promise<void> {
-    if (!this.canCompleteToday()) return;
+    if (!this.canCompleteTargetDate()) return;
     this.isSavingCompletion.set(true);
     try {
-      await this.habitsService.completeHabit(this.habitId, this.todayKey);
+      await this.habitsService.completeHabit(this.habitId, this.targetDate);
       await this.load(false);
       window.navigator.vibrate?.([50, 50, 50]);
     } finally {
@@ -449,8 +528,34 @@ export class HabitDetailsComponent implements OnDestroy {
     }
   }
 
+  private async undoHeldHabit(): Promise<void> {
+    if (!this.canUndoTargetDate()) return;
+    this.isSavingUndo.set(true);
+    try {
+      await this.habitsService.undoHabit(this.habitId, this.targetDate);
+      await this.load(false);
+      window.navigator.vibrate?.([50, 50, 50]);
+    } finally {
+      this.isSavingUndo.set(false);
+      this.cancelHold();
+    }
+  }
+
+  private canRunHoldAction(action: HoldAction): boolean {
+    return action === 'complete' ? this.canCompleteTargetDate() : this.canUndoTargetDate();
+  }
+
   private isDoneStatus(status: HabitLogStatus | null | undefined): boolean {
     return status === 'Done' || status === 0;
+  }
+
+  private dayNumberLabel(dateKey: string): string {
+    const monthView = this.calendar.buildMonthView(dateKey, dateKey, {
+      showAdjacentMonths: true,
+      showHolidays: false,
+      fixedWeekCount: false
+    });
+    return monthView.days.find(day => day.key === dateKey)?.dayOfMonth ?? '';
   }
 
   private dayOfWeekLabel(value: number | string): string {

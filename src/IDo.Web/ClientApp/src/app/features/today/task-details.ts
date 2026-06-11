@@ -1,4 +1,5 @@
-﻿import { Location } from '@angular/common';
+import { Location } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import * as signalR from '@microsoft/signalr';
@@ -15,16 +16,33 @@ type HoldAction = 'next' | 'previous';
   selector: 'app-task-details',
   template: `
     <header class="w-full top-0 sticky z-40 bg-theme-bg/90 backdrop-blur-md flex items-center justify-between px-margin-mobile py-md">
-      <button (click)="location.back()" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors active:scale-95 border-none outline-none">
+      <button type="button" (click)="location.back()" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-variant transition-colors active:scale-95 border-none outline-none">
         <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">arrow_back</span>
       </button>
       <div class="flex flex-col items-center min-w-0 px-sm">
         <h1 class="font-headline-md text-headline-md text-on-surface m-0 leading-tight">{{ i18n.text('Task Details') }}</h1>
         <span class="font-label-md text-label-md text-on-surface-variant truncate max-w-[220px]">{{ projectPathLabel() }}</span>
       </div>
-      <button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors active:scale-95 border-none bg-transparent">
+      <button
+        type="button"
+        (click)="toggleTaskMenu()"
+        [attr.aria-expanded]="isTaskMenuOpen()"
+        [attr.aria-label]="i18n.text('Task actions')"
+        class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors active:scale-95 border-none bg-transparent">
         <span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">more_vert</span>
       </button>
+      @if (isTaskMenuOpen()) {
+        <div class="task-menu">
+          <button type="button" class="task-menu-button" (click)="openEditTask()">
+            <span class="material-symbols-outlined">edit</span>
+            {{ i18n.text('Edit') }}
+          </button>
+          <button type="button" class="task-menu-button task-menu-danger" (click)="openDeleteConfirm()">
+            <span class="material-symbols-outlined">delete</span>
+            {{ i18n.text('Delete') }}
+          </button>
+        </div>
+      }
     </header>
 
     @if (isLoading()) {
@@ -257,11 +275,56 @@ type HoldAction = 'next' | 'previous';
           </button>
         </div>
       </div>
+
+      @if (isDeleteConfirmOpen()) {
+        <div
+          class="fixed inset-0 z-[70] bg-black/55 backdrop-blur-sm flex items-end justify-center px-margin-mobile pb-margin-mobile"
+          role="button"
+          tabindex="0"
+          (click)="closeDeleteConfirm()"
+          (keydown.enter)="closeDeleteConfirm()"
+          (keydown.space)="closeDeleteConfirm()">
+          <section
+            role="dialog"
+            aria-modal="true"
+            class="confirm-dialog w-full max-w-[448px]"
+            (click)="$event.stopPropagation()">
+            <div class="confirm-icon">
+              <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">delete</span>
+            </div>
+            <div class="min-w-0">
+              <h2 class="font-headline-md text-on-surface m-0">{{ i18n.text('Delete task?') }}</h2>
+              <p class="font-body-md text-on-surface-variant m-0 mt-xs">{{ i18n.text('This task will be removed from your active list.') }}</p>
+            </div>
+            @if (taskActionError()) {
+              <div class="rounded-xl border border-error/40 bg-error-container/30 text-on-error-container px-md py-sm text-body-md font-body-md">
+                {{ taskActionError() }}
+              </div>
+            }
+            <div class="confirm-actions">
+              <button type="button" class="confirm-secondary" (click)="closeDeleteConfirm()" [disabled]="isDeletingTask()">
+                {{ i18n.text('Keep task') }}
+              </button>
+              <button type="button" class="confirm-danger" (click)="confirmDeleteTask()" [disabled]="isDeletingTask()">
+                @if (isDeletingTask()) {
+                  <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                }
+                {{ isDeletingTask() ? i18n.text('Deleting task...') : i18n.text('Delete') }}
+              </button>
+            </div>
+          </section>
+        </div>
+      }
     }
   `,
   styles: [`
     :host { display: block; min-height: 100%; }
     .section-label { margin: 0; padding-left: 0.25rem; font: 600 11px/14px var(--font-app); color: var(--color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.05em; }
+    .task-menu { position: absolute; top: calc(100% - 8px); inset-inline-end: 16px; width: 184px; padding: 6px; border-radius: 18px; border: 1px solid var(--color-theme-border); background: color-mix(in srgb, var(--color-theme-elevated) 94%, transparent); box-shadow: 0 18px 46px rgba(0,0,0,0.36); backdrop-filter: blur(18px); display: flex; flex-direction: column; gap: 4px; }
+    .task-menu-button { width: 100%; min-height: 42px; border: 0; border-radius: 14px; background: transparent; color: var(--color-on-surface); display: flex; align-items: center; gap: 10px; padding: 0 12px; font: 600 13px/18px var(--font-app); text-align: start; transition: background-color 160ms ease, color 160ms ease; }
+    .task-menu-button:hover { background: var(--color-surface-container-high); }
+    .task-menu-button .material-symbols-outlined { font-size: 20px; }
+    .task-menu-danger { color: var(--color-error); }
     .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font: 600 11px/14px var(--font-app); transition: background-color 260ms ease, color 260ms ease, border-color 260ms ease, transform 260ms ease; }
     .status-todo { background: rgba(142, 155, 174, 0.12); color: var(--color-on-surface-variant); border: 1px solid rgba(142, 155, 174, 0.18); }
     .status-progress { background: rgba(62, 174, 255, 0.12); color: var(--color-theme-blue); border: 1px solid rgba(62, 174, 255, 0.2); }
@@ -301,6 +364,14 @@ type HoldAction = 'next' | 'previous';
     .hold-fill { position: absolute; inset: 0 auto 0 0; width: 0%; opacity: 0.28; transition: width 220ms ease-out; }
     .hold-fill-reverse { inset: 0 0 0 auto; }
     .hold-fill-active { width: 100%; transition: width 2000ms linear; }
+    .confirm-dialog { border: 1px solid var(--color-theme-border); border-radius: 28px; background: var(--color-theme-surface); padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 26px 70px rgba(0,0,0,0.48); }
+    .confirm-icon { width: 46px; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; color: var(--color-error); background: color-mix(in srgb, var(--color-error-container) 42%, transparent); border: 1px solid color-mix(in srgb, var(--color-error) 34%, transparent); }
+    .confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .confirm-secondary, .confirm-danger { min-height: 48px; border-radius: 999px; border: 0; padding: 0 14px; font: 700 14px/18px var(--font-app); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: transform 160ms ease, opacity 160ms ease; }
+    .confirm-secondary { background: var(--color-surface-container-high); color: var(--color-on-surface); }
+    .confirm-danger { background: var(--color-error); color: var(--color-on-error); }
+    .confirm-secondary:active, .confirm-danger:active { transform: scale(0.98); }
+    .confirm-secondary:disabled, .confirm-danger:disabled { opacity: 0.62; }
     @keyframes statusPulse { 0% { transform: scale(1); } 45% { transform: scale(1.06); } 100% { transform: scale(1); } }
     @keyframes commentEnter { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
   `]
@@ -314,6 +385,7 @@ export class TaskDetailsComponent implements OnDestroy {
   readonly location = inject(Location);
 
   private readonly taskId = this.route.snapshot.paramMap.get('id') ?? '';
+  private readonly taskUpdatedHandler = (event: Event) => this.handleTaskUpdated(event);
   private readonly holdDuration = 2000;
   private holdTimer?: ReturnType<typeof setTimeout>;
   private hubConnection: signalR.HubConnection | null = null;
@@ -331,6 +403,10 @@ export class TaskDetailsComponent implements OnDestroy {
   readonly commentDraft = signal('');
   readonly recentCommentId = signal<string | null>(null);
   readonly statusPulse = signal(false);
+  readonly isTaskMenuOpen = signal(false);
+  readonly isDeleteConfirmOpen = signal(false);
+  readonly isDeletingTask = signal(false);
+  readonly taskActionError = signal<string | null>(null);
 
   readonly task = computed(() => this.details()!.task);
   readonly comments = computed(() => this.details()?.comments ?? []);
@@ -353,10 +429,12 @@ export class TaskDetailsComponent implements OnDestroy {
   });
 
   constructor() {
+    window.addEventListener('ido:task-updated', this.taskUpdatedHandler);
     void this.loadTask();
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('ido:task-updated', this.taskUpdatedHandler);
     this.cancelHold();
     if (this.recentCommentTimer) clearTimeout(this.recentCommentTimer);
     if (this.statusPulseTimer) clearTimeout(this.statusPulseTimer);
@@ -381,6 +459,45 @@ export class TaskDetailsComponent implements OnDestroy {
     this.holdTimer = undefined;
     this.isHolding.set(false);
     this.activeHoldAction.set(null);
+  }
+
+  toggleTaskMenu(): void {
+    this.isTaskMenuOpen.update(value => !value);
+    this.taskActionError.set(null);
+  }
+
+  openEditTask(): void {
+    const task = this.details()?.task;
+    this.isTaskMenuOpen.set(false);
+    if (!task) return;
+    window.dispatchEvent(new CustomEvent('ido:open-create-modal', { detail: { mode: 'task', task } }));
+  }
+
+  openDeleteConfirm(): void {
+    this.isTaskMenuOpen.set(false);
+    this.taskActionError.set(null);
+    this.isDeleteConfirmOpen.set(true);
+  }
+
+  closeDeleteConfirm(): void {
+    if (this.isDeletingTask()) return;
+    this.isDeleteConfirmOpen.set(false);
+    this.taskActionError.set(null);
+  }
+
+  async confirmDeleteTask(): Promise<void> {
+    if (this.isDeletingTask()) return;
+    this.isDeletingTask.set(true);
+    this.taskActionError.set(null);
+    try {
+      await this.tasksService.deleteTask(this.taskId);
+      window.dispatchEvent(new CustomEvent('ido:task-deleted', { detail: { taskId: this.taskId } }));
+      this.location.back();
+    } catch (error) {
+      this.taskActionError.set(this.messageFromError(error, this.i18n.text('Could not delete task.')));
+    } finally {
+      this.isDeletingTask.set(false);
+    }
   }
 
   async submitComment(event: Event): Promise<void> {
@@ -429,7 +546,7 @@ export class TaskDetailsComponent implements OnDestroy {
   previousActionLabel(): string {
     const previous = this.previousStatus();
     if (!previous) return this.i18n.text('Back');
-    return this.i18n.language() === 'fa' ? `برگشت به ${this.statusLabel(previous)}` : `Back to ${this.statusLabel(previous)}`;
+    return this.i18n.language() === 'fa' ? `????? ?? ${this.statusLabel(previous)}` : `Back to ${this.statusLabel(previous)}`;
   }
 
   holdFillColor(action: HoldAction): string {
@@ -475,7 +592,7 @@ export class TaskDetailsComponent implements OnDestroy {
 
   commentsTitle(): string {
     return this.i18n.language() === 'fa'
-      ? `${this.i18n.number(this.comments().length)} نظر`
+      ? `${this.i18n.number(this.comments().length)} ???`
       : `${this.comments().length} Comment${this.comments().length === 1 ? '' : 's'}`;
   }
 
@@ -548,6 +665,11 @@ export class TaskDetailsComponent implements OnDestroy {
     if (statusChanged) this.animateStatus();
   }
 
+  private handleTaskUpdated(event: Event): void {
+    const task = event instanceof CustomEvent ? event.detail?.task as TaskDto | undefined : undefined;
+    if (task?.id === this.taskId) this.mergeTask(task);
+  }
+
   private mergeComment(comment: TaskCommentDto): void {
     const detail = this.details();
     if (!detail || detail.task.id !== comment.taskId) return;
@@ -598,5 +720,15 @@ export class TaskDetailsComponent implements OnDestroy {
     const date = new Date(`${value}T00:00:00`);
     if (Number.isNaN(date.getTime())) return value;
     return this.calendar.formatLongDate(date);
+  }
+
+  private messageFromError(error: unknown, fallback: string): string {
+    if (error instanceof HttpErrorResponse) {
+      const body = error.error as { errors?: string[]; error?: string } | null;
+      if (Array.isArray(body?.errors) && body.errors.length > 0) return body.errors.join(' ');
+      if (body?.error) return body.error;
+    }
+
+    return fallback;
   }
 }

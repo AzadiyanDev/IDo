@@ -1,7 +1,8 @@
-import { Component, OnDestroy, computed, inject, input, signal, output } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, input, signal, output } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { CalendarService } from '../../core/calendar.service';
 import { TasksService } from '../../core/tasks.service';
+import type { TaskDto } from '../../core/today.service';
 import { HabitScheduleType, HabitsService } from '../../core/habits.service';
 import { ProjectsService } from '../../core/projects.service';
 import { I18nService } from '../../core/i18n.service';
@@ -169,13 +170,20 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
                   [class.text-on-surface]="!isTomorrowSelected()">
                   {{ i18n.text('Tomorrow') }}
                 </button>
+                <button type="button" (click)="clearDueDate()" class="px-md py-3 rounded-full text-body-md font-body-md font-semibold transition-colors"
+                  [class.bg-primary-container]="!dueDate()"
+                  [class.text-on-primary-container]="!dueDate()"
+                  [class.bg-surface-container-highest]="!!dueDate()"
+                  [class.text-on-surface]="!!dueDate()">
+                  {{ i18n.text('No date') }}
+                </button>
                 <button type="button" (click)="showDatePicker.set(!showDatePicker())" class="px-md py-3 rounded-full bg-surface-container-highest text-on-surface text-body-md font-body-md font-semibold flex items-center gap-xs hover:bg-surface-variant transition-colors">
                   <span class="material-symbols-outlined text-[22px]">calendar_month</span>
                   {{ dueDateLabel() }}
                 </button>
               </div>
               @if (showDatePicker()) {
-                <app-calendar-date-picker [selectedDate]="dueDate()" (selectedDateChange)="setDueDate($event)" />
+                <app-calendar-date-picker [selectedDate]="datePickerSelectedDate()" (selectedDateChange)="setDueDate($event)" />
               }
             </div>
           }
@@ -254,16 +262,17 @@ export type CreateNewMode = 'task' | 'habit' | 'project';
     }
   `]
 })
-export class CreateNewModalComponent implements OnDestroy {
+export class CreateNewModalComponent implements OnDestroy, OnInit {
   private readonly calendar = inject(CalendarService);
   readonly i18n = inject(I18nService);
 
   mode = input<CreateNewMode>('task');
+  taskEdit = input<TaskDto | null>(null);
   closeClicked = output<void>();
   created = output<void>();
   title = signal('');
   description = signal('');
-  dueDate = signal(this.calendar.selectedTaskDate());
+  dueDate = signal<string | null>(this.calendar.selectedTaskDate());
   dueTime = signal('');
   habitReminderTime = signal('');
   habitIcon = signal('repeat');
@@ -277,7 +286,9 @@ export class CreateNewModalComponent implements OnDestroy {
   isCountable = signal(true);
   isSubmitting = signal(false);
   error = signal<string | null>(null);
-  readonly dueDateLabel = computed(() => this.calendar.formatShortDateKey(this.dueDate()));
+  readonly dueDateLabel = computed(() => this.dueDate() ? this.calendar.formatShortDateKey(this.dueDate()!) : this.i18n.text('No date'));
+  readonly datePickerSelectedDate = computed(() => this.dueDate() ?? this.calendar.todayKey());
+  readonly isEditingTask = computed(() => this.mode() === 'task' && this.taskEdit() !== null);
   private dragStartY: number | null = null;
   private dragStartHeight: number | null = null;
   private readonly collapsedHeight = 535;
@@ -311,6 +322,10 @@ export class CreateNewModalComponent implements OnDestroy {
     private readonly habits: HabitsService,
     private readonly projects: ProjectsService
   ) {}
+
+  ngOnInit(): void {
+    this.hydrateTaskEdit();
+  }
 
   ngOnDestroy(): void {
     this.removeDragListeners();
@@ -360,6 +375,23 @@ export class CreateNewModalComponent implements OnDestroy {
           icon: this.projectIcon()
         });
         window.dispatchEvent(new CustomEvent('ido:project-created'));
+      } else if (this.isEditingTask()) {
+        const task = this.taskEdit()!;
+        const updatedTask = await this.tasks.updateTask(task.id, {
+          title: this.title().trim(),
+          description: this.description().trim() || null,
+          color: task.color,
+          icon: task.icon,
+          dueDate: this.dueDate() || null,
+          dueTime: this.toTimeOnly(this.dueTime()),
+          reminderAtUtc: task.reminderAtUtc,
+          assigneeUserId: task.assigneeUserId,
+          status: null,
+          priority: task.priority,
+          isCountableInProgress: this.isCountable()
+        });
+        if (updatedTask.dueDate) this.calendar.setSelectedTaskDate(updatedTask.dueDate);
+        window.dispatchEvent(new CustomEvent('ido:task-updated', { detail: { task: updatedTask } }));
       } else {
         const task = await this.tasks.createPersonalTask({
           title: this.title().trim(),
@@ -367,7 +399,7 @@ export class CreateNewModalComponent implements OnDestroy {
           color: null,
           icon: null,
           dueDate: this.dueDate() || null,
-          dueTime: this.dueTime() || null,
+          dueTime: this.toTimeOnly(this.dueTime()),
           reminderAtUtc: null,
           assigneeUserId: null,
           projectId: null,
@@ -377,7 +409,7 @@ export class CreateNewModalComponent implements OnDestroy {
           isCountableInProgress: this.isCountable()
         });
         const dueDate = task.dueDate ?? this.dueDate();
-        this.calendar.setSelectedTaskDate(dueDate);
+        if (dueDate) this.calendar.setSelectedTaskDate(dueDate);
         window.dispatchEvent(new CustomEvent('ido:task-created', { detail: { dueDate } }));
       }
       this.created.emit();
@@ -404,12 +436,14 @@ export class CreateNewModalComponent implements OnDestroy {
   modalTitle(): string {
     if (this.mode() === 'habit') return this.i18n.text('Create Habit');
     if (this.mode() === 'project') return this.i18n.text('Create Project');
+    if (this.isEditingTask()) return this.i18n.text('Edit Task');
     return this.i18n.text('Create New');
   }
 
   modalSubtitle(): string {
     if (this.mode() === 'habit') return this.i18n.text('Add a repeatable routine');
     if (this.mode() === 'project') return this.i18n.text('Start a project workspace');
+    if (this.isEditingTask()) return this.i18n.text('Update this task');
     return this.i18n.text('Add a task for today');
   }
 
@@ -427,18 +461,21 @@ export class CreateNewModalComponent implements OnDestroy {
   submitLabel(): string {
     if (this.mode() === 'habit') return this.i18n.text('Create Habit');
     if (this.mode() === 'project') return this.i18n.text('Create Project');
+    if (this.isEditingTask()) return this.i18n.text('Update Task');
     return this.i18n.text('Create Task');
   }
 
   loadingTitle(): string {
     if (this.mode() === 'habit') return this.i18n.text('Creating habit');
     if (this.mode() === 'project') return this.i18n.text('Creating project');
+    if (this.isEditingTask()) return this.i18n.text('Updating task');
     return this.i18n.text('Creating todo');
   }
 
   loadingMessage(): string {
     if (this.mode() === 'habit') return this.i18n.text('Adding it to your routines');
     if (this.mode() === 'project') return this.i18n.text('Preparing the workspace');
+    if (this.isEditingTask()) return this.i18n.text('Saving task changes');
     return this.i18n.text('Adding it to today');
   }
 
@@ -529,6 +566,11 @@ export class CreateNewModalComponent implements OnDestroy {
     this.dueDate.set(date);
   }
 
+  clearDueDate(): void {
+    this.dueDate.set(null);
+    this.showDatePicker.set(false);
+  }
+
   isTodaySelected(): boolean {
     return this.dueDate() === this.calendar.todayKey();
   }
@@ -545,7 +587,9 @@ export class CreateNewModalComponent implements OnDestroy {
       if (body?.error) return body.error;
     }
 
-    return this.i18n.text(`Could not create ${this.entityName().toLowerCase()}.`);
+    return this.isEditingTask()
+      ? this.i18n.text('Could not update task.')
+      : this.i18n.text(`Could not create ${this.entityName().toLowerCase()}.`);
   }
 
   private entityName(): string {
@@ -557,5 +601,15 @@ export class CreateNewModalComponent implements OnDestroy {
   private toTimeOnly(value: string): string | null {
     if (!value) return null;
     return value.length === 5 ? `${value}:00` : value;
+  }
+
+  private hydrateTaskEdit(): void {
+    const task = this.taskEdit();
+    if (!task || this.mode() !== 'task') return;
+    this.title.set(task.title);
+    this.description.set(task.description ?? '');
+    this.dueDate.set(task.dueDate);
+    this.dueTime.set(task.dueTime?.slice(0, 5) ?? '');
+    this.isCountable.set(task.isCountableInProgress);
   }
 }

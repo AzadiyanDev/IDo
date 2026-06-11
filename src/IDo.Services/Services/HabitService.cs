@@ -141,6 +141,7 @@ public sealed class HabitService(IUnitOfWork unitOfWork, IDateTimeProvider dateT
         {
             log = new HabitLog { HabitId = habitId, UserId = userId, Date = date };
             await unitOfWork.HabitLogs.AddAsync(log, cancellationToken);
+            if (!habit.Logs.Contains(log)) habit.Logs.Add(log);
         }
         log.Status = status;
         log.CompletedAtUtc = status == HabitLogStatus.Done ? dateTimeProvider.UtcNow : null;
@@ -148,6 +149,23 @@ public sealed class HabitService(IUnitOfWork unitOfWork, IDateTimeProvider dateT
         habit.BestStreak = Math.Max(habit.BestStreak, habit.CurrentStreak);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return log.ToDto();
+    }
+
+    public async Task<HabitDto> UndoHabitForDateAsync(Guid userId, Guid habitId, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        var habit = await unitOfWork.Habits.GetHabitWithLogsAsync(habitId, cancellationToken) ?? throw new KeyNotFoundException("Habit not found.");
+        if (habit.UserId != userId) throw new UnauthorizedAccessException("User cannot update this habit.");
+        var log = habit.Logs.FirstOrDefault(x => x.Date == date) ?? await unitOfWork.HabitLogs.GetLogAsync(habitId, date, cancellationToken);
+        if (log is not null)
+        {
+            if (log.UserId != userId) throw new UnauthorizedAccessException("User cannot update this habit log.");
+            unitOfWork.HabitLogs.Delete(log);
+            habit.Logs.Remove(log);
+        }
+
+        habit.CurrentStreak = HabitRules.CalculateStreak(habit, date);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return habit.ToDto();
     }
 
     public async Task<int> CalculateStreakAsync(Guid habitId, DateOnly throughDate, CancellationToken cancellationToken = default)

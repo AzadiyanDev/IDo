@@ -394,7 +394,7 @@ export class TodayComponent implements OnDestroy {
   }
 
   openHabitDetails(id: string): void {
-    void this.router.navigate(['/habit', id]);
+    void this.router.navigate(['/habit', id], { queryParams: { date: this.selectedDate() } });
   }
 
   startHabitHold(event: Event, habit: TodayHabitDto): void {

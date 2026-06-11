@@ -69,6 +69,14 @@ public sealed class HabitsController(ICurrentUserService currentUser, IHabitServ
         return Ok(await habitService.CompleteHabitForDateAsync(userId.Value, id, date, cancellationToken));
     }
 
+    [HttpPost("{id:guid}/undo")]
+    public async Task<IActionResult> Undo(Guid id, [FromQuery] DateOnly date, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await habitService.UndoHabitForDateAsync(userId.Value, id, date, cancellationToken));
+    }
+
     [HttpGet("{id:guid}/progress")]
     public async Task<IActionResult> Progress(Guid id, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, CancellationToken cancellationToken)
     {

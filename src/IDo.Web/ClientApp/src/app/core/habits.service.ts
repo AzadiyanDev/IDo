@@ -112,4 +112,8 @@ export class HabitsService {
   completeHabit(id: string, date: string): Promise<HabitLogDto> {
     return firstValueFrom(this.http.post<HabitLogDto>(`/api/habits/${id}/complete?date=${encodeURIComponent(date)}`, {}, { withCredentials: true }));
   }
+
+  undoHabit(id: string, date: string): Promise<HabitDto> {
+    return firstValueFrom(this.http.post<HabitDto>(`/api/habits/${id}/undo?date=${encodeURIComponent(date)}`, {}, { withCredentials: true }));
+  }
 }

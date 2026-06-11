@@ -35,6 +35,7 @@ public interface IHabitService
     Task DeleteHabitAsync(Guid userId, Guid habitId, CancellationToken cancellationToken = default);
     Task<HabitDetailsDto> GetHabitDetailsAsync(Guid userId, Guid habitId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
     Task<HabitLogDto> CompleteHabitForDateAsync(Guid userId, Guid habitId, DateOnly date, CancellationToken cancellationToken = default);
+    Task<HabitDto> UndoHabitForDateAsync(Guid userId, Guid habitId, DateOnly date, CancellationToken cancellationToken = default);
     Task<int> CalculateStreakAsync(Guid habitId, DateOnly throughDate, CancellationToken cancellationToken = default);
     Task<decimal> CalculateSuccessRateAsync(Guid habitId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<HabitDto>> GetHabitsForTodayAsync(Guid userId, DateOnly date, CancellationToken cancellationToken = default);

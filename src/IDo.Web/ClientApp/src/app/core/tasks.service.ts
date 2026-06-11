@@ -19,6 +19,20 @@ export interface CreateTaskRequest {
   isCountableInProgress: boolean;
 }
 
+export interface UpdateTaskRequest {
+  title: string;
+  description: string | null;
+  color: string | null;
+  icon: string | null;
+  dueDate: string | null;
+  dueTime: string | null;
+  reminderAtUtc: string | null;
+  assigneeUserId: string | null;
+  status: TaskStatus | null;
+  priority: number | null;
+  isCountableInProgress: boolean;
+}
+
 export interface TaskCommentDto {
   id: string;
   taskId: string;
@@ -51,6 +65,14 @@ export class TasksService {
 
   getTaskDetails(id: string): Promise<TaskDetailsDto> {
     return firstValueFrom(this.http.get<TaskDetailsDto>(`/api/tasks/${id}`, { withCredentials: true }));
+  }
+
+  updateTask(id: string, request: UpdateTaskRequest): Promise<TaskDto> {
+    return firstValueFrom(this.http.post<TaskDto>(`/api/tasks/${id}`, request, { withCredentials: true }));
+  }
+
+  deleteTask(id: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`/api/tasks/${id}/delete`, {}, { withCredentials: true }));
   }
 
   changeStatus(id: string, status: TaskStatus): Promise<TaskDto> {

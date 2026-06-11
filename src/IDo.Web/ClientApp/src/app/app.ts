@@ -7,6 +7,7 @@ import { AppUpdateModalComponent } from './shared/app-update-modal/app-update-mo
 import { I18nService } from './core/i18n.service';
 import { PwaInstallService } from './core/pwa-install.service';
 import { AppUpdateService } from './core/app-update.service';
+import type { TaskDto } from './core/today.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,7 +24,7 @@ import { AppUpdateService } from './core/app-update.service';
       }
 
       @if (isCreateModalOpen()) {
-        <app-create-new-modal [mode]="createMode()" (closeClicked)="isCreateModalOpen.set(false)"></app-create-new-modal>
+        <app-create-new-modal [mode]="createMode()" [taskEdit]="createTaskEdit()" (closeClicked)="closeCreateModal()"></app-create-new-modal>
       }
 
       <app-update-modal [open]="appUpdate.updateAvailable()" (updateClicked)="applyUpdate()"></app-update-modal>
@@ -33,6 +34,7 @@ import { AppUpdateService } from './core/app-update.service';
 export class App {
   isCreateModalOpen = signal(false);
   createMode = signal<CreateNewMode>('task');
+  createTaskEdit = signal<TaskDto | null>(null);
   showBottomNav = signal(true);
   router = inject(Router);
   readonly i18n = inject(I18nService);
@@ -70,7 +72,13 @@ export class App {
         ? 'project'
         : 'task';
     this.createMode.set(mode);
+    this.createTaskEdit.set(null);
     this.isCreateModalOpen.set(true);
+  }
+
+  closeCreateModal(): void {
+    this.isCreateModalOpen.set(false);
+    this.createTaskEdit.set(null);
   }
 
   private readonly openCreateModalFromEvent = (event: Event): void => {
@@ -78,11 +86,17 @@ export class App {
       ? event.detail.mode
       : 'task';
     this.createMode.set(mode);
+    this.createTaskEdit.set(event instanceof CustomEvent && mode === 'task' ? this.taskFromEvent(event.detail?.task) : null);
     this.isCreateModalOpen.set(true);
   };
 
   private isCreateMode(value: unknown): value is CreateNewMode {
     return value === 'task' || value === 'habit' || value === 'project';
+  }
+
+  private taskFromEvent(value: unknown): TaskDto | null {
+    if (!value || typeof value !== 'object') return null;
+    return typeof (value as TaskDto).id === 'string' ? value as TaskDto : null;
   }
 
   applyUpdate(): void {
