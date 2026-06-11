@@ -69,6 +69,7 @@ public sealed class AuthController(IUserManagementService users, ICurrentUserSer
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new("ido:user_profile_id", user.UserId.ToString()),
             new(ClaimTypes.Name, user.UserName),
             new(ClaimTypes.Email, user.Email)
         };
