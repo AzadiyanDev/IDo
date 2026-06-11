@@ -27,6 +27,7 @@ const FA_TEXT: Record<string, string> = {
   'Tomorrow': 'فردا',
   'Week': 'هفته',
   'Month': 'ماه',
+  'Year': 'سال',
   'Date': 'تاریخ',
   'Reminder': 'یادآور',
   'No reminder': 'بدون یادآور',
@@ -36,6 +37,8 @@ const FA_TEXT: Record<string, string> = {
   'Review': 'بررسی',
   'Previous month': 'ماه قبل',
   'Next month': 'ماه بعد',
+  'Previous year': 'سال قبل',
+  'Next year': 'سال بعد',
 
   'Profile': 'پروفایل',
   'Settings': 'تنظیمات',
