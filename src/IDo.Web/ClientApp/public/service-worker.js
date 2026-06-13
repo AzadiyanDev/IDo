@@ -1,29 +1,36 @@
-const CACHE_NAME = 'ido-pwa-v20260605-session-update';
-const APP_SHELL = [
-  '/',
+const CACHE_NAME = 'ido-pwa-v20260613-startup-recovery';
+const CORE_ASSETS = [
   '/index.html',
-  '/version.json',
   '/manifest.webmanifest',
   '/icons/ido-icon-192.png',
   '/icons/ido-icon-512.png'
 ];
+const NETWORK_TIMEOUT_MS = 4500;
+const CACHEABLE_ASSET = /\.(?:css|js|mjs|json|webmanifest|png|jpe?g|webp|gif|svg|ico|ttf|otf|woff2?)$/i;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.allSettled(CORE_ASSETS.map(async (asset) => {
+      const response = await fetch(asset, { cache: 'reload' });
+      if (response.ok) await cache.put(asset, response);
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys
-        .filter((key) => key !== CACHE_NAME)
-        .map((key) => caches.delete(key))))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    await Promise.all((await caches.keys())
+      .filter((key) => key !== CACHE_NAME)
+      .map((key) => caches.delete(key)));
+
+    if (self.registration.navigationPreload) {
+      await self.registration.navigationPreload.enable();
+    }
+
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -32,40 +39,70 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/hubs/')) return;
-  if (url.pathname === '/service-worker.js' || url.pathname === '/version.json') {
-    event.respondWith(fetch(request, { cache: 'no-store' }));
-    return;
-  }
+  if (shouldBypass(url)) return;
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
-          }
-
-          return response;
-        })
-        .catch(() => caches.match('/index.html'))
-    );
+    event.respondWith(networkFirst(request, '/index.html', { cache: 'no-store' }, event));
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
+  if (!isCacheableAsset(request, url)) return;
 
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
+  if (request.destination === 'script' || request.destination === 'style' || url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    event.respondWith(networkFirst(request, request, {}, event));
+    return;
+  }
 
-        return response;
-      });
-    })
-  );
+  event.respondWith(staleWhileRevalidate(request, event));
 });
+
+function shouldBypass(url) {
+  return url.pathname.startsWith('/api/')
+    || url.pathname.startsWith('/hubs/')
+    || url.pathname === '/service-worker.js'
+    || url.pathname === '/version.json';
+}
+
+function isCacheableAsset(request, url) {
+  return ['font', 'image', 'manifest', 'script', 'style'].includes(request.destination)
+    || CACHEABLE_ASSET.test(url.pathname);
+}
+
+async function networkFirst(request, fallbackKey, fetchOptions = {}, event) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const preload = event?.preloadResponse ? await event.preloadResponse : null;
+    const response = preload || await fetchWithTimeout(request, fetchOptions);
+    if (response.ok) await cache.put(fallbackKey, response.clone());
+    return response;
+  } catch {
+    const cached = await cache.match(fallbackKey);
+    if (cached) return cached;
+    return Response.error();
+  }
+}
+
+async function staleWhileRevalidate(request, event) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  const refresh = fetch(request)
+    .then(async (response) => {
+      if (response.ok) await cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => undefined);
+
+  if (cached) {
+    event.waitUntil(refresh);
+    return cached;
+  }
+
+  return await refresh || Response.error();
+}
+
+function fetchWithTimeout(request, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+  return fetch(request, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeout));
+}

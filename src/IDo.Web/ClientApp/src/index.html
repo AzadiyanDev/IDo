@@ -15,6 +15,33 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/ido-icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/ido-icon-180.png" />
+    <script>
+      (() => {
+        const key = 'ido.boot.recovered';
+        const marked = () => {
+          try { return sessionStorage.getItem(key) === '1'; } catch { return true; }
+        };
+        const mark = () => {
+          try { sessionStorage.setItem(key, '1'); } catch {}
+        };
+        const clearRuntimeCache = async () => {
+          const cacheClear = 'caches' in window
+            ? caches.keys().then((keys) => Promise.all(keys.map((item) => caches.delete(item))))
+            : Promise.resolve();
+          const swClear = 'serviceWorker' in navigator
+            ? navigator.serviceWorker.getRegistrations().then((items) => Promise.all(items.map((item) => item.unregister())))
+            : Promise.resolve();
+          await Promise.allSettled([cacheClear, swClear]);
+        };
+
+        window.setTimeout(() => {
+          const root = document.querySelector('app-root');
+          if (!root || root.children.length > 0 || marked()) return;
+          mark();
+          clearRuntimeCache().finally(() => window.location.reload());
+        }, 15000);
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>
