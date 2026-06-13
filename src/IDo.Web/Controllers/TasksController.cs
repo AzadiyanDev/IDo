@@ -37,6 +37,14 @@ public sealed class TasksController(ICurrentUserService currentUser, ITaskServic
         return Ok(await taskService.UpdateTaskAsync(userId.Value, id, request, cancellationToken));
     }
 
+    [HttpPost("rollover")]
+    public async Task<IActionResult> Rollover(RolloverTasksRequest request, CancellationToken cancellationToken)
+    {
+        var userId = CurrentUserId();
+        if (userId.Result is not null) return userId.Result;
+        return Ok(await taskService.RolloverUnfinishedTasksAsync(userId.Value, request, cancellationToken));
+    }
+
     [HttpPost("{id:guid}/complete")]
     public async Task<IActionResult> Complete(Guid id, CancellationToken cancellationToken)
     {

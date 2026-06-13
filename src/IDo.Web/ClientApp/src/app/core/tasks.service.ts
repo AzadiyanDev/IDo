@@ -33,6 +33,18 @@ export interface UpdateTaskRequest {
   isCountableInProgress: boolean;
 }
 
+export interface RolloverTasksRequest {
+  sourceDate: string;
+  targetDate: string;
+}
+
+export interface RolloverTasksResponse {
+  sourceDate: string;
+  targetDate: string;
+  movedCount: number;
+  movedTasks: TaskDto[];
+}
+
 export interface TaskCommentDto {
   id: string;
   taskId: string;
@@ -69,6 +81,10 @@ export class TasksService {
 
   updateTask(id: string, request: UpdateTaskRequest): Promise<TaskDto> {
     return firstValueFrom(this.http.post<TaskDto>(`/api/tasks/${id}`, request, { withCredentials: true }));
+  }
+
+  rolloverTasks(request: RolloverTasksRequest): Promise<RolloverTasksResponse> {
+    return firstValueFrom(this.http.post<RolloverTasksResponse>('/api/tasks/rollover', request, { withCredentials: true }));
   }
 
   deleteTask(id: string): Promise<void> {

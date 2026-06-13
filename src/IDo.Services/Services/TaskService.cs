@@ -51,6 +51,37 @@ public sealed class TaskService(IUnitOfWork unitOfWork, IDateTimeProvider dateTi
         return dto;
     }
 
+    public async Task<RolloverTasksResponse> RolloverUnfinishedTasksAsync(Guid userId, RolloverTasksRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.SourceDate == request.TargetDate) return new(request.SourceDate, request.TargetDate, 0, Array.Empty<TaskDto>());
+
+        var personalTasks = await unitOfWork.Tasks.GetPersonalTasksByDateAsync(userId, request.SourceDate, cancellationToken);
+        var projectTasks = await unitOfWork.Tasks.GetProjectTasksByDateAsync(userId, request.SourceDate, cancellationToken);
+        var candidates = personalTasks
+            .Concat(projectTasks)
+            .Where(task => task.Status is not IDoTaskStatus.Done and not IDoTaskStatus.Archived)
+            .GroupBy(task => task.Id)
+            .Select(group => group.First())
+            .ToArray();
+        var movedTasks = new List<IDoTask>(candidates.Length);
+
+        foreach (var task in candidates)
+        {
+            if (!await permissions.CanEditTaskAsync(task.Id, userId, cancellationToken)) continue;
+            task.DueDate = request.TargetDate;
+            unitOfWork.Tasks.Update(task);
+            movedTasks.Add(task);
+        }
+
+        if (movedTasks.Count > 0) await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new(
+            request.SourceDate,
+            request.TargetDate,
+            movedTasks.Count,
+            movedTasks.Select(task => task.ToDto()).ToArray());
+    }
+
     public Task<TaskDto> CompleteTaskAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default) => ChangeStatusAsync(userId, taskId, IDoTaskStatus.Done, cancellationToken);
 
     public async Task<TaskDto> ChangeStatusAsync(Guid userId, Guid taskId, IDoTaskStatus status, CancellationToken cancellationToken = default)

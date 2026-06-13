@@ -64,6 +64,7 @@ export class TasksComponent implements OnDestroy {
   readonly i18n = inject(I18nService);
   private readonly todayService = inject(TodayService);
   private readonly taskCreatedHandler = (event: Event) => void this.handleTaskCreated(event);
+  private readonly tasksRolledOverHandler = () => void this.load();
 
   readonly selectedDate = signal(this.calendar.todayKey());
   readonly dashboard = signal<TodayDashboardDto | null>(null);
@@ -74,11 +75,13 @@ export class TasksComponent implements OnDestroy {
 
   constructor() {
     window.addEventListener('ido:task-created', this.taskCreatedHandler);
+    window.addEventListener('ido:tasks-rolled-over', this.tasksRolledOverHandler);
     void this.load();
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('ido:task-created', this.taskCreatedHandler);
+    window.removeEventListener('ido:tasks-rolled-over', this.tasksRolledOverHandler);
   }
 
   selectDate(date: string): void {

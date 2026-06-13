@@ -20,6 +20,7 @@ public interface ITaskService
     Task<TaskDto> CreatePersonalTaskAsync(Guid userId, CreateTaskRequest request, CancellationToken cancellationToken = default);
     Task<TaskDto> CreateProjectTaskAsync(Guid userId, CreateTaskRequest request, CancellationToken cancellationToken = default);
     Task<TaskDto> UpdateTaskAsync(Guid userId, Guid taskId, UpdateTaskRequest request, CancellationToken cancellationToken = default);
+    Task<RolloverTasksResponse> RolloverUnfinishedTasksAsync(Guid userId, RolloverTasksRequest request, CancellationToken cancellationToken = default);
     Task<TaskDto> CompleteTaskAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default);
     Task<TaskDto> ChangeStatusAsync(Guid userId, Guid taskId, IDoTaskStatus status, CancellationToken cancellationToken = default);
     Task ArchiveTaskAsync(Guid userId, Guid taskId, CancellationToken cancellationToken = default);

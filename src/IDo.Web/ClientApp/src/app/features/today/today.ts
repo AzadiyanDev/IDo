@@ -263,6 +263,7 @@ export class TodayComponent implements OnDestroy {
   private readonly habitsService = inject(HabitsService);
   private readonly router = inject(Router);
   private readonly taskCreatedHandler = (event: Event) => void this.handleTaskCreated(event);
+  private readonly tasksRolledOverHandler = () => void this.loadToday(false);
   private readonly habitHoldDuration = 2000;
   private habitHoldTimer?: ReturnType<typeof setTimeout>;
 
@@ -327,11 +328,13 @@ export class TodayComponent implements OnDestroy {
 
   constructor() {
     window.addEventListener('ido:task-created', this.taskCreatedHandler);
+    window.addEventListener('ido:tasks-rolled-over', this.tasksRolledOverHandler);
     void this.loadToday();
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('ido:task-created', this.taskCreatedHandler);
+    window.removeEventListener('ido:tasks-rolled-over', this.tasksRolledOverHandler);
     this.cancelHabitHold();
   }
 

@@ -381,6 +381,29 @@ public sealed class BusinessRuleTests
     }
 
     [Fact]
+    public async Task Rollover_unfinished_tasks_moves_yesterdays_open_tasks_to_target_date()
+    {
+        var (uow, _) = CreateUnitOfWork();
+        var userId = Guid.NewGuid();
+        var yesterday = new DateOnly(2026, 5, 28);
+        var today = new DateOnly(2026, 5, 29);
+        var openTask = new IDoTask { CreatorUserId = userId, AssigneeUserId = userId, Title = "Open", DueDate = yesterday, Status = IDoTaskStatus.Todo, Type = IDoTaskType.Personal };
+        var doneTask = new IDoTask { CreatorUserId = userId, AssigneeUserId = userId, Title = "Done", DueDate = yesterday, Status = IDoTaskStatus.Done, Type = IDoTaskType.Personal };
+
+        await uow.Tasks.AddAsync(openTask);
+        await uow.Tasks.AddAsync(doneTask);
+        await uow.SaveChangesAsync();
+        var service = CreateTaskService(uow);
+
+        var result = await service.RolloverUnfinishedTasksAsync(userId, new(yesterday, today));
+
+        Assert.Equal(1, result.MovedCount);
+        Assert.Equal(today, openTask.DueDate);
+        Assert.Equal(yesterday, doneTask.DueDate);
+        Assert.Contains(result.MovedTasks, task => task.Id == openTask.Id && task.DueDate == today);
+    }
+
+    [Fact]
     public async Task Weekly_activity_counts_completed_tasks_across_the_requested_week()
     {
         var (uow, _) = CreateUnitOfWork();
